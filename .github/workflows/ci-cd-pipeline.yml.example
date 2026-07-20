@@ -1,0 +1,63 @@
+# Exemple générique de pipeline CI/CD.
+# Copier ce fichier vers ci-cd-pipeline.yml et adapter les commandes à la pile technique du projet.
+
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Display repository context
+        run: |
+          echo "Branch: $GITHUB_REF"
+          echo "Commit: $GITHUB_SHA"
+
+      - name: Setup project
+        run: |
+          echo "Adapter cette étape au langage et aux outils du projet."
+          echo "Exemples possibles: make setup, ./scripts/setup, package-manager install"
+
+      - name: Lint
+        run: |
+          echo "Adapter: make lint"
+
+      - name: Test
+        run: |
+          echo "Adapter: make test"
+
+      - name: Build or package
+        run: |
+          echo "Adapter: make build"
+
+      - name: Security checks
+        run: |
+          echo "Adapter: make security-check"
+
+  release-dry-run:
+    name: Release dry run
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate changelog and version
+        run: |
+          echo "Adapter: vérifier SemVer, changelog et artefacts de publication."

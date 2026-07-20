@@ -1,0 +1,36 @@
+# Étiquettes recommandées pour favoriser une collaboration claire.
+# Ce fichier est informatif par défaut. Il peut être appliqué avec un outil de synchronisation de labels.
+
+- name: good first issue
+  color: 7057ff
+  description: Tâche bien cadrée pour une première contribution.
+- name: help wanted
+  color: 008672
+  description: Contribution externe bienvenue.
+- name: documentation
+  color: 0075ca
+  description: Documentation, exemples ou clarification.
+- name: test
+  color: d4c5f9
+  description: Tests unitaires, intégration ou non-régression.
+- name: accessibility
+  color: ffd700
+  description: Lisibilité, ergonomie ou accessibilité.
+- name: translation
+  color: c5def5
+  description: Traduction ou internationalisation.
+- name: triage
+  color: fbca04
+  description: Demande à qualifier ou compléter.
+- name: bug
+  color: d73a4a
+  description: Comportement incorrect reproductible.
+- name: enhancement
+  color: a2eeef
+  description: Amélioration ou nouvelle fonctionnalité.
+- name: security
+  color: b60205
+  description: Sujet lié à la sécurité. Ne pas publier de détails sensibles.
+- name: governance
+  color: 5319e7
+  description: Règles, rôles ou processus décisionnel.

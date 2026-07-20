@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gnu-trackgenerator"
+version = "0.1.2"
+description = "Programmable desktop click-track generator using LilyPond, MIDI and WAV rendering."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-only" }
+authors = [{ name = "GNU TrackGenerator contributors" }]
+dependencies = ["customtkinter>=5.2"]
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+]
+
+[project.scripts]
+gnu-trackgenerator = "gnu_trackgenerator.gui:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

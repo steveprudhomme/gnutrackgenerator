@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions communautaires
+    url: https://example.org/discussions
+    about: Pour les questions d’utilisation, les idées exploratoires et l’aide entre utilisateurs.
+  - name: Signalement de sécurité privé
+    url: https://example.org/security
+    about: Ne publiez jamais une vulnérabilité critique dans un ticket public. Consultez SECURITY.md.
