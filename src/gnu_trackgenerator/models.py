@@ -13,12 +13,22 @@ from dataclasses import dataclass, asdict
 from typing import Any
 
 APP_NAME = "GNU TrackGenerator"
-APP_VERSION = "0.1.2"
+APP_VERSION = "0.1.3"
 
 # LilyPond note durations are represented by powers of two: 1, 2, 4, 8, 16...
 # Keeping the denominator in this set supports common and complex meters such as
 # 7/8, 11/16, 27/16, 5/4, etc.
 SUPPORTED_DENOMINATORS = {1, 2, 4, 8, 16, 32, 64}
+
+CHORD_INSTRUMENT_PIANO = "piano"
+CHORD_INSTRUMENT_STRINGS = "strings"
+CHORD_INSTRUMENT_ACOUSTIC_GUITAR = "acoustic_guitar"
+
+SUPPORTED_CHORD_INSTRUMENTS = {
+    CHORD_INSTRUMENT_PIANO,
+    CHORD_INSTRUMENT_STRINGS,
+    CHORD_INSTRUMENT_ACOUSTIC_GUITAR,
+}
 
 
 class ValidationError(ValueError):
@@ -35,12 +45,17 @@ class Segment:
         numerator: Number of subdivisions in each measure.
         denominator: LilyPond rhythmic duration used by each subdivision.
         measures: Number of measures to repeat this pattern.
+        chord_symbol: Optional chord symbol entered by the user, e.g. C, Cm7,
+            F#dim7 or Bbmaj9. The symbol is parsed during generation.
+        chord_instrument: Instrument used for the optional chord staff.
     """
 
     bpm: int
     numerator: int
     denominator: int
     measures: int
+    chord_symbol: str | None = None
+    chord_instrument: str = CHORD_INSTRUMENT_PIANO
 
     def validate(self) -> None:
         """Validate one segment and raise a readable error if invalid."""
@@ -55,20 +70,33 @@ class Segment:
             )
         if self.measures <= 0:
             raise ValidationError("Le nombre de mesures doit être un entier positif.")
+        if self.chord_instrument not in SUPPORTED_CHORD_INSTRUMENTS:
+            allowed = ", ".join(sorted(SUPPORTED_CHORD_INSTRUMENTS))
+            raise ValidationError(f"Instrument d'accord invalide. Valeurs permises: {allowed}.")
+        if self.chord_symbol is not None and not self.chord_symbol.strip():
+            raise ValidationError("Le symbole d'accord ne peut pas être vide.")
 
-    def to_dict(self) -> dict[str, int]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize the segment to a JSON-friendly dictionary."""
-        return asdict(self)
+        data = asdict(self)
+        # Keep the .gen file compact and compatible with older projects.
+        if not data.get("chord_symbol"):
+            data.pop("chord_symbol", None)
+            data.pop("chord_instrument", None)
+        return data
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> "Segment":
         """Create and validate a Segment from JSON-like data."""
         try:
+            chord_symbol = payload.get("chord_symbol")
             segment = cls(
                 bpm=int(payload["bpm"]),
                 numerator=int(payload["numerator"]),
                 denominator=int(payload["denominator"]),
                 measures=int(payload["measures"]),
+                chord_symbol=str(chord_symbol).strip() if chord_symbol else None,
+                chord_instrument=str(payload.get("chord_instrument", CHORD_INSTRUMENT_PIANO)),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise ValidationError("Segment invalide dans le fichier .gen.") from exc

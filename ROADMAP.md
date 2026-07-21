@@ -12,26 +12,36 @@ Objectif : consolider la base fonctionnelle actuelle avant d’ajouter des fonct
 - Documenter les chemins système requis pour les outils externes.
 - Ajouter des tests unitaires pour la validation des segments et la génération LilyPond.
 - Garder la licence, la gouvernance, le support et les modèles de contribution à jour.
+- Maintenir la compatibilité du format `.gen` avec les projets contenant des accords symboliques.
 
-## v0.2.0 — Menu de ligne et première gestion des accords
+### Éléments déjà intégrés dans 0.1.3
 
-Objectif : ajouter une première interface d’édition harmonique à chaque ligne de séquence, sans complexifier inutilement le flux principal de génération de click track.
+- Icône de menu `☰` au bout de chaque ligne.
+- Option **Accord au début de chaque ligne**.
+- Saisie d’accords selon la notation A, B, C, D, E, F, G.
+- Conversion automatique des accords vers LilyPond.
+- Choix d’instrument : Piano, Strings et Guitare sèche.
+- Rendu strummé/arpégé pour la Guitare sèche.
 
-### 1. Ajouter un menu de ligne
+## v0.2.0 — Accords par mesure et enrichissement harmonique
 
-- Ajouter une icône « trois lignes » ou menu contextuel à l’extrémité de chaque ligne musicale.
+Objectif : poursuivre l’édition harmonique maintenant que la version 0.1.3 contient déjà le menu de ligne, l’accord au début de chaque ligne, la conversion de symboles d’accords et le choix Piano / Strings / Guitare sèche.
+
+### 1. Stabiliser le menu de ligne existant
+
+- Améliorer l’ergonomie de l’icône « trois lignes » déjà présente à l’extrémité de chaque ligne musicale.
 - Le menu doit permettre d’activer des options propres à la ligne courante.
 - Le menu doit rester compact afin de ne pas surcharger l’interface principale.
 
-### 2. Ajouter l’option « Accord » dans le menu
+### 2. Enrichir l’option « Accord » dans le menu
 
-- Ajouter une entrée **Accord** dans le menu de ligne.
+- Conserver et enrichir l’entrée **Accord** dans le menu de ligne.
 - L’entrée **Accord** doit ouvrir un sous-menu ou un panneau d’options liées aux accords.
 - Les options d’accord doivent être désactivables afin que l’utilisateur puisse revenir à une ligne simple de click track.
 
-### 2.1. Sous-menu : accord au début de chaque ligne
+### 2.1. Accord au début de chaque ligne — stabilisation
 
-Objectif : permettre à l’utilisateur de saisir un accord unique associé à la ligne complète.
+Objectif : stabiliser la fonction déjà intégrée en 0.1.3 et améliorer sa validation.
 
 - Ajouter l’option **Accord au début de chaque ligne**.
 - Lorsqu’elle est activée, afficher sous la ligne principale une zone de saisie dédiée à l’accord.

@@ -13,3 +13,18 @@ Ce dossier contient les tests isolés du code de production.
 - Toute nouvelle fonctionnalité doit être accompagnée de tests.
 - Tout bogue corrigé devrait ajouter un test de non-régression.
 - Les tests doivent être reproductibles localement et en intégration continue.
+
+## Exécuter les tests unitaires actuels
+
+Depuis la racine du projet :
+
+```bash
+PYTHONPATH=src python -m unittest discover -s tests/unit -p "test_*.py"
+```
+
+Sous PowerShell :
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m unittest discover -s tests/unit -p "test_*.py"
+```
