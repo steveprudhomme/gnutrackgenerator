@@ -3,21 +3,26 @@
 
 """Domain models for GNU TrackGenerator.
 
-This module intentionally contains no GUI code and no subprocess calls.  It is
+This module intentionally contains no GUI code and no subprocess calls. It is
 safe to unit-test in isolation and represents the musical/project data model.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import Any
 
+from .rhythm import (
+    RHYTHM_QUARTER,
+    SUPPORTED_RHYTHM_UNITS,
+    chord_grid_durations,
+    resolve_grid_events,
+)
+
 APP_NAME = "GNU TrackGenerator"
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.3.0"
 
 # LilyPond note durations are represented by powers of two: 1, 2, 4, 8, 16...
-# Keeping the denominator in this set supports common and complex meters such as
-# 7/8, 11/16, 27/16, 5/4, etc.
 SUPPORTED_DENOMINATORS = {1, 2, 4, 8, 16, 32, 64}
 
 CHORD_INSTRUMENT_PIANO = "piano"
@@ -33,11 +38,13 @@ SUPPORTED_CHORD_INSTRUMENTS = {
 CHORD_MODE_NONE = "none"
 CHORD_MODE_LINE = "line"
 CHORD_MODE_MEASURE = "measure"
+CHORD_MODE_GRID = "grid"
 
 SUPPORTED_CHORD_MODES = {
     CHORD_MODE_NONE,
     CHORD_MODE_LINE,
     CHORD_MODE_MEASURE,
+    CHORD_MODE_GRID,
 }
 
 
@@ -49,19 +56,9 @@ class ValidationError(ValueError):
 class Segment:
     """A programmable click-track segment.
 
-    Args:
-        bpm: Tempo. In this first version, the beat unit is the denominator of
-            the time signature. Example: 7/8 at 120 means eighth-note = 120.
-        numerator: Number of subdivisions in each measure.
-        denominator: LilyPond rhythmic duration used by each subdivision.
-        measures: Number of measures to repeat this pattern.
-        chord_symbol: Optional chord symbol entered by the user, e.g. C, Cm7,
-            F#dim7 or Bbmaj9. The symbol is parsed during generation.
-        chord_instrument: Instrument used for the optional chord staff.
-        chord_mode: Chord-entry mode: no chord, one chord repeated for the
-            entire line, or one independently editable chord per measure.
-        measure_chords: Chord symbols associated with individual measures.
-            Empty entries represent silent measures.
+    Chords can be disabled, repeated for the whole line, entered once per
+    measure, or entered in a rhythmic grid. In grid mode, an empty cell means
+    silence and a comma extends the previous chord without retriggering it.
     """
 
     bpm: int
@@ -72,15 +69,15 @@ class Segment:
     chord_instrument: str = CHORD_INSTRUMENT_PIANO
     chord_mode: str = CHORD_MODE_NONE
     measure_chords: tuple[str | None, ...] = ()
+    chord_grid_unit: str = RHYTHM_QUARTER
+    grid_chords: tuple[str | None, ...] = ()
 
     @property
     def effective_chord_mode(self) -> str:
-        """Return a backward-compatible effective chord mode.
-
-        Projects created before 0.2.0 only stored ``chord_symbol``. Treat those
-        projects as line-level chord projects even when ``chord_mode`` is absent.
-        """
+        """Return a backward-compatible effective chord mode."""
         if self.chord_mode == CHORD_MODE_NONE:
+            if self.grid_chords:
+                return CHORD_MODE_GRID
             if self.measure_chords:
                 return CHORD_MODE_MEASURE
             if self.chord_symbol:
@@ -89,7 +86,7 @@ class Segment:
 
     @property
     def chord_symbols_by_measure(self) -> tuple[str | None, ...]:
-        """Return one chord symbol (or silence) for every measure."""
+        """Return one symbol for every measure in the legacy line/measure modes."""
         mode = self.effective_chord_mode
         if mode == CHORD_MODE_LINE:
             return tuple(self.chord_symbol for _ in range(self.measures))
@@ -98,8 +95,21 @@ class Segment:
         return tuple(None for _ in range(self.measures))
 
     @property
+    def chord_grid_durations(self):
+        """Return exact grid-cell durations for the current segment."""
+        return chord_grid_durations(
+            self.numerator,
+            self.denominator,
+            self.measures,
+            self.chord_grid_unit,
+        )
+
+    @property
     def has_any_chord(self) -> bool:
         """Return whether at least one audible chord is defined."""
+        mode = self.effective_chord_mode
+        if mode == CHORD_MODE_GRID:
+            return any(value not in {None, "", ","} for value in self.grid_chords)
         return any(symbol for symbol in self.chord_symbols_by_measure)
 
     def validate(self) -> None:
@@ -126,25 +136,35 @@ class Segment:
         if mode == CHORD_MODE_LINE:
             if self.chord_symbol is None or not self.chord_symbol.strip():
                 raise ValidationError("Un accord doit être saisi pour le mode par ligne.")
-            if self.measure_chords:
-                raise ValidationError(
-                    "Un segment ne peut pas utiliser simultanément un accord par ligne et des accords par mesure."
-                )
+            if self.measure_chords or self.grid_chords:
+                raise ValidationError("Un segment ne peut utiliser qu'un seul mode d'accord.")
+
         elif mode == CHORD_MODE_MEASURE:
-            if self.chord_symbol:
-                raise ValidationError(
-                    "Un segment ne peut pas utiliser simultanément un accord par ligne et des accords par mesure."
-                )
+            if self.chord_symbol or self.grid_chords:
+                raise ValidationError("Un segment ne peut utiliser qu'un seul mode d'accord.")
             if len(self.measure_chords) != self.measures:
                 raise ValidationError(
                     "Le nombre d'accords par mesure doit correspondre au nombre de mesures de la ligne."
                 )
 
-        for measure_index, symbol in enumerate(self.measure_chords, start=1):
-            if symbol is not None and not symbol.strip():
+        elif mode == CHORD_MODE_GRID:
+            if self.chord_symbol or self.measure_chords:
+                raise ValidationError("Un segment ne peut utiliser qu'un seul mode d'accord.")
+            if self.chord_grid_unit not in SUPPORTED_RHYTHM_UNITS:
+                raise ValidationError("La subdivision rythmique choisie est invalide.")
+            try:
+                durations = self.chord_grid_durations
+            except ValueError as exc:
+                raise ValidationError(str(exc)) from exc
+            if len(self.grid_chords) != len(durations):
                 raise ValidationError(
-                    f"Le symbole d'accord de la mesure {measure_index} ne peut pas contenir uniquement des espaces."
+                    "Le nombre d'accords rythmiques doit correspondre au nombre de cases calculé pour la ligne."
                 )
+            try:
+                resolve_grid_events(self.grid_chords, durations)
+            except ValueError as exc:
+                raise ValidationError(str(exc)) from exc
+
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the segment to a JSON-friendly dictionary."""
@@ -152,17 +172,29 @@ class Segment:
         mode = self.effective_chord_mode
         data["chord_mode"] = mode
         data["measure_chords"] = list(self.measure_chords)
+        data["grid_chords"] = list(self.grid_chords)
 
-        # Keep the .gen file compact while retaining the selected chord mode.
         if mode == CHORD_MODE_NONE:
-            data.pop("chord_symbol", None)
-            data.pop("chord_instrument", None)
-            data.pop("chord_mode", None)
-            data.pop("measure_chords", None)
+            for key in (
+                "chord_symbol",
+                "chord_instrument",
+                "chord_mode",
+                "measure_chords",
+                "chord_grid_unit",
+                "grid_chords",
+            ):
+                data.pop(key, None)
         elif mode == CHORD_MODE_LINE:
             data.pop("measure_chords", None)
+            data.pop("chord_grid_unit", None)
+            data.pop("grid_chords", None)
         elif mode == CHORD_MODE_MEASURE:
             data.pop("chord_symbol", None)
+            data.pop("chord_grid_unit", None)
+            data.pop("grid_chords", None)
+        elif mode == CHORD_MODE_GRID:
+            data.pop("chord_symbol", None)
+            data.pop("measure_chords", None)
         return data
 
     @classmethod
@@ -170,9 +202,8 @@ class Segment:
         """Create and validate a Segment from JSON-like data."""
         try:
             chord_symbol = payload.get("chord_symbol")
-            raw_measure_chords = payload.get("measure_chords", [])
-            if raw_measure_chords is None:
-                raw_measure_chords = []
+
+            raw_measure_chords = payload.get("measure_chords", []) or []
             if not isinstance(raw_measure_chords, (list, tuple)):
                 raise TypeError("measure_chords must be a list")
             measure_chords = tuple(
@@ -180,14 +211,25 @@ class Segment:
                 for symbol in raw_measure_chords
             )
 
+            raw_grid_chords = payload.get("grid_chords", []) or []
+            if not isinstance(raw_grid_chords, (list, tuple)):
+                raise TypeError("grid_chords must be a list")
+            grid_chords = tuple(
+                str(symbol).strip() if symbol is not None and str(symbol).strip() else None
+                for symbol in raw_grid_chords
+            )
+
             raw_mode = payload.get("chord_mode")
             if raw_mode is None:
-                if measure_chords:
+                if grid_chords:
+                    raw_mode = CHORD_MODE_GRID
+                elif measure_chords:
                     raw_mode = CHORD_MODE_MEASURE
                 elif chord_symbol:
                     raw_mode = CHORD_MODE_LINE
                 else:
                     raw_mode = CHORD_MODE_NONE
+
             segment = cls(
                 bpm=int(payload["bpm"]),
                 numerator=int(payload["numerator"]),
@@ -197,6 +239,8 @@ class Segment:
                 chord_instrument=str(payload.get("chord_instrument", CHORD_INSTRUMENT_PIANO)),
                 chord_mode=str(raw_mode),
                 measure_chords=measure_chords,
+                chord_grid_unit=str(payload.get("chord_grid_unit", RHYTHM_QUARTER)),
+                grid_chords=grid_chords,
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise ValidationError("Segment invalide dans le fichier .gen.") from exc

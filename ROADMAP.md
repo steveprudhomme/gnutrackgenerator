@@ -52,17 +52,32 @@ Objectif : permettre à l’utilisateur de définir une progression harmonique d
 - Tests unitaires et messages d’erreur dédiés.
 
 
-## v0.3.0 — Amélioration musicale du click track
+## v0.3.0 — Grille rythmique d’accords — réalisé
 
-Objectif : enrichir la logique musicale du métronome programmable.
+Objectif : permettre des changements d’accords à l’intérieur des mesures selon une valeur rythmique choisie.
 
-- Choix du son pour le premier temps.
-- Choix du son pour les temps secondaires.
+### Éléments intégrés
+
+- Nouveau mode **Accords selon une subdivision rythmique** dans le menu `☰`.
+- Valeurs disponibles : blanche, blanche pointée, noire, noire pointée, croche et triolets de rondes, blanches, noires ou croches.
+- Calcul exact des cases avec des fractions rationnelles, y compris dans les signatures asymétriques.
+- Exemple : quatre mesures en `4/4` divisées en noires produisent 16 cases.
+- Reconstruction dynamique de la grille lorsque la signature, le nombre de mesures ou la subdivision change.
+- Une case vide produit un silence.
+- Une virgule `,` prolonge l’accord précédent sans nouvelle attaque.
+- Fusion des prolongations dans le MIDI/WAV et liaison LilyPond lorsqu’un accord traverse une barre de mesure.
+- Affichage des symboles seulement lors des nouvelles attaques d’accords.
+- Diagrammes de guitare placés uniquement au début des nouveaux accords.
+- Extension rétrocompatible du format `.gen` avec `chord_grid_unit` et `grid_chords`.
+- Tests pour les subdivisions, les triolets, les fins de ligne ajustées et les prolongations.
+
+### Pistes pour la série 0.3.x
+
+- Choix du son pour le premier temps et les temps secondaires.
 - Accentuation configurable par subdivision.
-- Patterns personnalisés par mesure.
-- Subdivisions internes : croches, doubles croches, triolets, quintuplets.
-- Support des mesures composées avec groupements visuels, par exemple `3+2+2/8`.
-- Export d’un aperçu textuel du pattern.
+- Groupements visuels des mesures composées, par exemple `3+2+2/8`.
+- Prévisualisation textuelle de la grille avant génération.
+
 
 ## v0.4.0 — Expérience utilisateur
 

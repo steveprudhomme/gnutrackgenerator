@@ -15,10 +15,11 @@ from gnu_trackgenerator.models import (
 
 
 class LilyPondOutputTests(unittest.TestCase):
-    def test_chord_symbol_is_printed_above_click_staff(self) -> None:
+    def test_chord_symbol_is_printed_on_spacer_track_above_click_staff(self) -> None:
         project = ProjectData([Segment(120, 4, 4, 1, chord_symbol="C7#9")])
         source = build_lilypond_source(project, title="test")
-        self.assertIn('bd4^\\markup { \\bold "C7#9" }', source)
+        self.assertIn('s1^\\markup { \\bold "C7#9" }', source)
+        self.assertIn('\\new DrumVoice { \\chordLabelTrack }', source)
 
     def test_guitar_fretboards_are_added_when_guitar_chords_exist(self) -> None:
         project = ProjectData([
@@ -27,7 +28,7 @@ class LilyPondOutputTests(unittest.TestCase):
         source = build_lilypond_source(project, title="test")
         self.assertIn('\\include "predefined-guitar-fretboards.ly"', source)
         self.assertIn('\\new FretBoards', source)
-        self.assertIn('\\repeat unfold 1 { c1*4/4 | }', source)
+        self.assertIn('c1 |', source)
 
     def test_fretboard_chord_quality_duration_order_is_lilypond_valid(self) -> None:
         project = ProjectData([
@@ -35,8 +36,8 @@ class LilyPondOutputTests(unittest.TestCase):
             Segment(120, 5, 8, 1, chord_symbol="Dm", chord_instrument=CHORD_INSTRUMENT_ACOUSTIC_GUITAR),
         ])
         source = build_lilypond_source(project, title="test")
-        self.assertIn('\\repeat unfold 1 { a1*7/4:m | }', source)
-        self.assertIn('\\repeat unfold 1 { d1*5/8:m | }', source)
+        self.assertIn('a1*7/4:m |', source)
+        self.assertIn('d1*5/8:m |', source)
         self.assertNotIn('a:m1*7/4', source)
         self.assertNotIn('d:m1*5/8', source)
 

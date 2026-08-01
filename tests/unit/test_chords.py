@@ -5,7 +5,12 @@
 
 import unittest
 
-from gnu_trackgenerator.chords import chord_symbol_to_lilypond_chord
+from gnu_trackgenerator.chords import (
+    ChordParseError,
+    chord_symbol_to_lilypond_chord,
+    chord_symbol_to_lilypond_fretboard_chord,
+    normalize_chord_symbol,
+)
 
 
 class ChordConversionTests(unittest.TestCase):
@@ -25,11 +30,6 @@ class ChordConversionTests(unittest.TestCase):
         self.assertEqual(chord_symbol_to_lilypond_chord("F#m7"), "<fis a cis' e'>")
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-from gnu_trackgenerator.chords import chord_symbol_to_lilypond_fretboard_chord
-
 
 class GuitarFretboardChordTests(unittest.TestCase):
     def test_major_chordmode_for_fretboard(self) -> None:
@@ -41,7 +41,6 @@ class GuitarFretboardChordTests(unittest.TestCase):
     def test_unsupported_extended_chord_skips_fretboard(self) -> None:
         self.assertIsNone(chord_symbol_to_lilypond_fretboard_chord("C7#9"))
 
-from gnu_trackgenerator.chords import ChordParseError, normalize_chord_symbol
 
 
 class GenericAddedDegreeChordTests(unittest.TestCase):
@@ -66,3 +65,31 @@ class GenericAddedDegreeChordTests(unittest.TestCase):
     def test_unknown_base_quality_before_add_is_rejected(self) -> None:
         with self.assertRaises(ChordParseError):
             normalize_chord_symbol("Cfooadd11")
+
+
+class ParenthesizedChordModifierTests(unittest.TestCase):
+    def test_minor_seventh_flat_thirteenth_is_supported(self) -> None:
+        self.assertEqual(
+            chord_symbol_to_lilypond_chord("G#m7(b13)"),
+            "<aes b ees' fis' e''>",
+        )
+
+    def test_parenthesized_sharp_ninth_matches_existing_form(self) -> None:
+        self.assertEqual(
+            chord_symbol_to_lilypond_chord("C7(#9)"),
+            chord_symbol_to_lilypond_chord("C7#9"),
+        )
+
+    def test_multiple_parenthesized_modifiers_are_supported(self) -> None:
+        self.assertEqual(
+            chord_symbol_to_lilypond_chord("C7(b9,#11)"),
+            "<c e g bes cis' fis'>",
+        )
+
+    def test_parenthesized_altered_fifth_replaces_natural_fifth(self) -> None:
+        _root, _pc, _suffix, quality = normalize_chord_symbol("Cm7(b5)")
+        self.assertEqual(quality.degrees, ("1", "b3", "b5", "b7"))
+
+
+if __name__ == "__main__":
+    unittest.main()

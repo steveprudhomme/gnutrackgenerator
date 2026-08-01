@@ -55,6 +55,10 @@ ADD_QUALITY_RE = re.compile(
     r"^(?P<base>.*?)(?:\()?add(?P<degree>(?:bb|##|b|#)?[1-9][0-9]*)(?:\))?$",
     re.IGNORECASE,
 )
+PARENTHESIZED_MODIFIERS_RE = re.compile(
+    r"^(?P<base>[^()]*)\((?P<modifiers>[^()]*)\)$",
+    re.IGNORECASE,
+)
 
 # LilyPond's English note names.  The chosen spellings favor readability and
 # validity over perfect enharmonic spelling for every theoretical context.
@@ -199,6 +203,7 @@ SUPPORTED_CHORD_EXAMPLES: tuple[str, ...] = (
     "C13",
     "Cmaj13",
     "C7#9",
+    "G#m7(b13)",
 )
 
 
@@ -228,41 +233,105 @@ def degree_to_semitones(degree: str) -> int:
     return semitones
 
 
-def resolve_chord_quality(suffix: str) -> ChordQuality:
-    """Resolve an explicit quality or a generic ``addX`` construction.
+def _degree_number(degree: str) -> int:
+    """Return the diatonic degree number from a normalized degree token."""
+    match = DEGREE_TOKEN_RE.fullmatch(degree)
+    if not match:
+        raise ChordParseError(f"Degré d'accord invalide: '{degree}'.")
+    return int(match.group(2))
 
-    Supported examples include ``add11``, ``madd9``, ``7add13``, ``add#11``
-    and parenthesized forms such as ``(add11)``.  The part before ``add`` is
-    resolved as an existing chord quality; when omitted, a major triad is used.
+
+def _extend_quality_with_degrees(
+    base_quality: ChordQuality,
+    degrees_to_add: list[str],
+) -> ChordQuality:
+    """Add or alter degrees on top of an existing chord quality.
+
+    A parenthesized altered degree replaces another spelling of the same
+    diatonic degree when present.  For example, ``m7(b5)`` replaces the
+    natural fifth, while ``m7(b13)`` simply adds the flat thirteenth.
+    """
+    degrees = list(base_quality.degrees)
+
+    for degree in degrees_to_add:
+        match = DEGREE_TOKEN_RE.fullmatch(degree)
+        if not match:
+            raise ChordParseError(
+                f"Modification d'accord invalide: '{degree}'. "
+                "Utilisez par exemple b13, #9, add11 ou b9,#11."
+            )
+
+        accidental = match.group(1)
+        number = int(match.group(2))
+
+        # An accidental in parentheses conventionally alters that degree.
+        # Remove a natural or differently altered spelling of the same degree
+        # before adding the requested one.
+        if accidental:
+            degrees = [item for item in degrees if _degree_number(item) != number]
+
+        interval = degree_to_semitones(degree)
+        if all(degree_to_semitones(item) != interval for item in degrees):
+            degrees.append(degree)
+
+    degrees.sort(key=degree_to_semitones)
+    modifier_text = ", ".join(degrees_to_add)
+    return ChordQuality(
+        f"{base_quality.name} avec modification {modifier_text}",
+        tuple(degrees),
+    )
+
+
+def resolve_chord_quality(suffix: str) -> ChordQuality:
+    """Resolve explicit, ``addX`` and parenthesized chord constructions.
+
+    Supported examples include ``add11``, ``madd9``, ``7add13``, ``add#11``,
+    ``D(add11)``, ``G#m7(b13)`` and multi-modifier forms such as
+    ``C7(b9,#11)``.  Parenthesized degrees are applied to a recognized base
+    quality without requiring a dedicated hard-coded chord entry.
     """
     normalized = suffix.replace("♭", "b").replace("♯", "#")
     if normalized in CHORD_QUALITIES:
         return CHORD_QUALITIES[normalized]
 
-    match = ADD_QUALITY_RE.fullmatch(normalized)
-    if not match:
-        examples = ", ".join(SUPPORTED_CHORD_EXAMPLES[:12]) + ", ..."
-        raise ChordParseError(
-            f"Type d'accord non supporté: '{suffix or 'majeur'}'. Exemples: {examples}"
-        )
+    add_match = ADD_QUALITY_RE.fullmatch(normalized)
+    if add_match:
+        base_suffix = add_match.group("base")
+        degree = add_match.group("degree")
+        if base_suffix not in CHORD_QUALITIES:
+            raise ChordParseError(
+                f"Qualité de base non supportée avant add: '{base_suffix}'. "
+                "Exemples valides: Dadd11, Cmadd9, C7add13."
+            )
+        return _extend_quality_with_degrees(CHORD_QUALITIES[base_suffix], [degree])
 
-    base_suffix = match.group("base")
-    degree = match.group("degree")
-    if base_suffix not in CHORD_QUALITIES:
-        raise ChordParseError(
-            f"Qualité de base non supportée avant add: '{base_suffix}'. "
-            "Exemples valides: Dadd11, Cmadd9, C7add13."
-        )
+    modifier_match = PARENTHESIZED_MODIFIERS_RE.fullmatch(normalized)
+    if modifier_match:
+        base_suffix = modifier_match.group("base")
+        if base_suffix not in CHORD_QUALITIES:
+            raise ChordParseError(
+                f"Qualité de base non supportée avant les parenthèses: '{base_suffix}'. "
+                "Exemples valides: G#m7(b13), C7(#9), C7(b9,#11)."
+            )
 
-    base_quality = CHORD_QUALITIES[base_suffix]
-    degrees = list(base_quality.degrees)
-    added_interval = degree_to_semitones(degree)
-    if all(degree_to_semitones(item) != added_interval for item in degrees):
-        degrees.append(degree)
-    degrees.sort(key=degree_to_semitones)
+        raw_modifiers = modifier_match.group("modifiers")
+        modifiers: list[str] = []
+        for raw_modifier in raw_modifiers.split(","):
+            modifier = raw_modifier.strip()
+            if modifier.lower().startswith("add"):
+                modifier = modifier[3:]
+            if not modifier:
+                raise ChordParseError(
+                    "La liste de modifications entre parenthèses contient une valeur vide."
+                )
+            modifiers.append(modifier)
 
-    base_name = base_quality.name
-    return ChordQuality(f"{base_name} avec ajout {degree}", tuple(degrees))
+        return _extend_quality_with_degrees(CHORD_QUALITIES[base_suffix], modifiers)
+
+    examples = ", ".join(SUPPORTED_CHORD_EXAMPLES[:12]) + ", ..."
+    raise ChordParseError(
+        f"Type d'accord non supporté: '{suffix or 'majeur'}'. Exemples: {examples}"
+    )
 
 
 def normalize_chord_symbol(symbol: str) -> tuple[str, int, str, ChordQuality]:

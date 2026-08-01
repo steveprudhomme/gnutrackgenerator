@@ -23,6 +23,7 @@ from .models import (
     CHORD_INSTRUMENT_ACOUSTIC_GUITAR,
     CHORD_INSTRUMENT_PIANO,
     CHORD_INSTRUMENT_STRINGS,
+    CHORD_MODE_GRID,
     CHORD_MODE_LINE,
     CHORD_MODE_MEASURE,
     CHORD_MODE_NONE,
@@ -31,6 +32,15 @@ from .models import (
     ValidationError,
 )
 from .project_io import load_project, save_project
+from .rhythm import (
+    RHYTHM_LABEL_TO_UNIT,
+    RHYTHM_QUARTER,
+    RHYTHM_UNIT_DURATIONS,
+    RHYTHM_UNIT_LABELS,
+    chord_grid_durations,
+    lilypond_duration,
+    measure_duration,
+)
 
 
 INSTRUMENT_LABEL_TO_VALUE = {
@@ -60,7 +70,9 @@ class SegmentRow(ctk.CTkFrame):
         self.chord_mode = CHORD_MODE_NONE
         self.line_chord_visible = False
         self.measure_chord_visible = False
+        self.grid_chord_visible = False
         self.measure_chord_vars: list[ctk.StringVar] = []
+        self.grid_chord_vars: list[ctk.StringVar] = []
 
         segment = defaults or Segment(bpm=120, numerator=4, denominator=4, measures=4)
         self.bpm_var = ctk.StringVar(value=str(segment.bpm))
@@ -71,17 +83,31 @@ class SegmentRow(ctk.CTkFrame):
         self.chord_instrument_var = ctk.StringVar(
             value=INSTRUMENT_VALUE_TO_LABEL.get(segment.chord_instrument, "Piano")
         )
+        self.chord_grid_unit_var = ctk.StringVar(
+            value=RHYTHM_UNIT_LABELS.get(segment.chord_grid_unit, RHYTHM_UNIT_LABELS[RHYTHM_QUARTER])
+        )
+        self.grid_status_var = ctk.StringVar(value="")
 
         mode = segment.effective_chord_mode
-        if mode == CHORD_MODE_MEASURE:
+        if mode == CHORD_MODE_GRID:
+            self.chord_mode = CHORD_MODE_GRID
+            self.grid_chord_vars = [ctk.StringVar(value=value or "") for value in segment.grid_chords]
+        elif mode == CHORD_MODE_MEASURE:
             self.chord_mode = CHORD_MODE_MEASURE
-            self.measure_chord_vars = [ctk.StringVar(value=symbol or "") for symbol in segment.measure_chords]
+            self.measure_chord_vars = [
+                ctk.StringVar(value=symbol or "") for symbol in segment.measure_chords
+            ]
         elif mode == CHORD_MODE_LINE:
             self.chord_mode = CHORD_MODE_LINE
 
         self._build_widgets()
-        self.measures_var.trace_add("write", self._on_measure_count_changed)
-        if mode == CHORD_MODE_MEASURE:
+        self.measures_var.trace_add("write", self._on_timing_changed)
+        self.numerator_var.trace_add("write", self._on_timing_changed)
+        self.denominator_var.trace_add("write", self._on_timing_changed)
+
+        if mode == CHORD_MODE_GRID:
+            self.show_grid_chord_area()
+        elif mode == CHORD_MODE_MEASURE:
             self.show_measure_chord_area()
         elif mode == CHORD_MODE_LINE:
             self.show_line_chord_area()
@@ -92,16 +118,25 @@ class SegmentRow(ctk.CTkFrame):
             self.grid_columnconfigure(col, weight=1 if col in {1, 3, 5, 7} else 0)
 
         ctk.CTkLabel(self, text="BPM").grid(row=0, column=0, padx=(8, 4), pady=8)
-        ctk.CTkEntry(self, textvariable=self.bpm_var, width=70).grid(row=0, column=1, padx=4, pady=8)
-
-        ctk.CTkLabel(self, text="Signature").grid(row=0, column=2, padx=(12, 4), pady=8)
-        ctk.CTkEntry(self, textvariable=self.numerator_var, width=55).grid(row=0, column=3, padx=(4, 2), pady=8)
+        ctk.CTkEntry(self, textvariable=self.bpm_var, width=70).grid(
+            row=0, column=1, padx=4, pady=8
+        )
+        ctk.CTkLabel(self, text="Signature").grid(
+            row=0, column=2, padx=(12, 4), pady=8
+        )
+        ctk.CTkEntry(self, textvariable=self.numerator_var, width=55).grid(
+            row=0, column=3, padx=(4, 2), pady=8
+        )
         ctk.CTkLabel(self, text="/").grid(row=0, column=4, padx=0, pady=8)
-        ctk.CTkEntry(self, textvariable=self.denominator_var, width=55).grid(row=0, column=5, padx=(2, 4), pady=8)
-
-        ctk.CTkLabel(self, text="Mesures").grid(row=0, column=6, padx=(12, 4), pady=8)
-        ctk.CTkEntry(self, textvariable=self.measures_var, width=70).grid(row=0, column=7, padx=4, pady=8)
-
+        ctk.CTkEntry(self, textvariable=self.denominator_var, width=55).grid(
+            row=0, column=5, padx=(2, 4), pady=8
+        )
+        ctk.CTkLabel(self, text="Mesures").grid(
+            row=0, column=6, padx=(12, 4), pady=8
+        )
+        ctk.CTkEntry(self, textvariable=self.measures_var, width=70).grid(
+            row=0, column=7, padx=4, pady=8
+        )
         ctk.CTkButton(self, text="+", width=34, command=lambda: self.on_add_after(self)).grid(
             row=0, column=8, padx=(8, 2), pady=8
         )
@@ -114,9 +149,11 @@ class SegmentRow(ctk.CTkFrame):
 
         self.menu_frame = ctk.CTkFrame(self)
         self.menu_frame.grid_columnconfigure(1, weight=1)
-        ctk.CTkLabel(self.menu_frame, text="Menu de ligne", font=ctk.CTkFont(weight="bold")).grid(
-            row=0, column=0, padx=(10, 8), pady=8, sticky="w"
-        )
+        ctk.CTkLabel(
+            self.menu_frame,
+            text="Menu de ligne",
+            font=ctk.CTkFont(weight="bold"),
+        ).grid(row=0, column=0, padx=(10, 8), pady=8, sticky="w")
         ctk.CTkButton(
             self.menu_frame,
             text="Accord → Accord au début de chaque ligne",
@@ -126,28 +163,36 @@ class SegmentRow(ctk.CTkFrame):
             self.menu_frame,
             text="Accord → Accord au début de chaque mesure",
             command=self.show_measure_chord_area,
-        ).grid(row=1, column=1, padx=8, pady=(4, 8), sticky="ew")
+        ).grid(row=1, column=1, padx=8, pady=4, sticky="ew")
+        ctk.CTkButton(
+            self.menu_frame,
+            text="Accord → Accords selon une subdivision rythmique",
+            command=self.show_grid_chord_area,
+        ).grid(row=2, column=1, padx=8, pady=4, sticky="ew")
         ctk.CTkButton(
             self.menu_frame,
             text="Accord → Désactiver les accords",
             command=self.disable_chords,
-        ).grid(row=2, column=1, padx=8, pady=(0, 8), sticky="ew")
+        ).grid(row=3, column=1, padx=8, pady=(4, 8), sticky="ew")
         ctk.CTkButton(self.menu_frame, text="Masquer", width=80, command=self.hide_menu).grid(
-            row=0, column=2, rowspan=3, padx=(8, 10), pady=8
+            row=0, column=2, rowspan=4, padx=(8, 10), pady=8
         )
 
+        self._build_line_chord_frame()
+        self._build_measure_chord_frame()
+        self._build_grid_chord_frame()
+
+    def _build_line_chord_frame(self) -> None:
         self.line_chord_frame = ctk.CTkFrame(self)
         self.line_chord_frame.grid_columnconfigure(1, weight=1)
-
         ctk.CTkLabel(self.line_chord_frame, text="Accord pour toute la ligne").grid(
             row=0, column=0, padx=(10, 6), pady=(8, 4), sticky="w"
         )
         ctk.CTkEntry(
             self.line_chord_frame,
             textvariable=self.chord_symbol_var,
-            placeholder_text="Ex.: C, Cm, C7, F#maj7, Bb9, C7#9",
+            placeholder_text="Ex.: C, Cm7, Dadd11, G#m7(b13)",
         ).grid(row=0, column=1, padx=6, pady=(8, 4), sticky="ew")
-
         ctk.CTkLabel(self.line_chord_frame, text="Instrument").grid(
             row=0, column=2, padx=(10, 6), pady=(8, 4)
         )
@@ -157,21 +202,17 @@ class SegmentRow(ctk.CTkFrame):
             values=list(INSTRUMENT_LABEL_TO_VALUE.keys()),
             width=150,
         ).grid(row=0, column=3, padx=6, pady=(8, 4))
-
         ctk.CTkButton(
-            self.line_chord_frame,
-            text="⌃",
-            width=38,
-            command=self.hide_line_chord_area,
+            self.line_chord_frame, text="⌃", width=38, command=self.hide_line_chord_area
         ).grid(row=0, column=4, padx=(6, 10), pady=(8, 4))
-
         examples = ", ".join(SUPPORTED_CHORD_EXAMPLES[:12]) + ", ..."
         ctk.CTkLabel(
             self.line_chord_frame,
-            text=f"Saisir un symbole d’accord A–G. Exemples supportés : {examples}",
+            text=f"Saisir un symbole d’accord A–G. Exemples : {examples}",
             font=ctk.CTkFont(size=11),
         ).grid(row=1, column=0, columnspan=5, padx=10, pady=(0, 8), sticky="w")
 
+    def _build_measure_chord_frame(self) -> None:
         self.measure_chord_frame = ctk.CTkFrame(self)
         self.measure_chord_frame.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
@@ -194,24 +235,80 @@ class SegmentRow(ctk.CTkFrame):
             width=38,
             command=self.hide_measure_chord_area,
         ).grid(row=0, column=3, padx=(6, 10), pady=(8, 4))
-
-        self.measure_chord_entries_frame = ctk.CTkFrame(self.measure_chord_frame, fg_color="transparent")
+        self.measure_chord_entries_frame = ctk.CTkFrame(
+            self.measure_chord_frame, fg_color="transparent"
+        )
         self.measure_chord_entries_frame.grid(
             row=1, column=0, columnspan=4, padx=8, pady=(4, 4), sticky="ew"
         )
         for column in range(4):
             self.measure_chord_entries_frame.grid_columnconfigure(column, weight=1)
-
         ctk.CTkLabel(
             self.measure_chord_frame,
-            text=(
-                "Une case vide produit une mesure sans accord. Chaque accord saisi dure une mesure complète."
-            ),
+            text="Une case vide produit une mesure sans accord. Chaque accord dure une mesure complète.",
             font=ctk.CTkFont(size=11),
         ).grid(row=2, column=0, columnspan=4, padx=10, pady=(0, 8), sticky="w")
 
+    def _build_grid_chord_frame(self) -> None:
+        self.grid_chord_frame = ctk.CTkFrame(self)
+        self.grid_chord_frame.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            self.grid_chord_frame,
+            text="Grille rythmique d’accords",
+            font=ctk.CTkFont(weight="bold"),
+        ).grid(row=0, column=0, padx=(10, 8), pady=(8, 4), sticky="w")
+        ctk.CTkLabel(self.grid_chord_frame, text="Subdivision").grid(
+            row=0, column=1, padx=(8, 4), pady=(8, 4), sticky="e"
+        )
+        ctk.CTkOptionMenu(
+            self.grid_chord_frame,
+            variable=self.chord_grid_unit_var,
+            values=list(RHYTHM_LABEL_TO_UNIT.keys()),
+            command=lambda _value: self._on_grid_unit_changed(),
+            width=180,
+        ).grid(row=0, column=2, padx=4, pady=(8, 4))
+        ctk.CTkLabel(self.grid_chord_frame, text="Instrument").grid(
+            row=0, column=3, padx=(8, 4), pady=(8, 4)
+        )
+        ctk.CTkOptionMenu(
+            self.grid_chord_frame,
+            variable=self.chord_instrument_var,
+            values=list(INSTRUMENT_LABEL_TO_VALUE.keys()),
+            width=150,
+        ).grid(row=0, column=4, padx=4, pady=(8, 4))
+        ctk.CTkButton(
+            self.grid_chord_frame,
+            text="⌃",
+            width=38,
+            command=self.hide_grid_chord_area,
+        ).grid(row=0, column=5, padx=(6, 10), pady=(8, 4))
+
+        self.grid_chord_entries_frame = ctk.CTkFrame(
+            self.grid_chord_frame, fg_color="transparent"
+        )
+        self.grid_chord_entries_frame.grid(
+            row=1, column=0, columnspan=6, padx=8, pady=(4, 4), sticky="ew"
+        )
+        for column in range(6):
+            self.grid_chord_entries_frame.grid_columnconfigure(column, weight=1)
+
+        ctk.CTkLabel(
+            self.grid_chord_frame,
+            textvariable=self.grid_status_var,
+            font=ctk.CTkFont(size=11, weight="bold"),
+        ).grid(row=2, column=0, columnspan=6, padx=10, pady=(2, 0), sticky="w")
+        ctk.CTkLabel(
+            self.grid_chord_frame,
+            text=(
+                "Saisir un accord pour le jouer, une virgule (,) pour prolonger l’accord précédent "
+                "sans nouvelle attaque, ou laisser vide pour produire un silence."
+            ),
+            font=ctk.CTkFont(size=11),
+            wraplength=920,
+            justify="left",
+        ).grid(row=3, column=0, columnspan=6, padx=10, pady=(0, 8), sticky="w")
+
     def toggle_menu(self) -> None:
-        """Show or hide the per-row menu."""
         if self.menu_visible:
             self.hide_menu()
         else:
@@ -219,50 +316,58 @@ class SegmentRow(ctk.CTkFrame):
             self.menu_visible = True
 
     def hide_menu(self) -> None:
-        """Hide the per-row menu."""
         self.menu_frame.grid_forget()
         self.menu_visible = False
 
-    def show_line_chord_area(self) -> None:
-        """Show one chord entry that repeats for every measure in the line."""
-        self.chord_mode = CHORD_MODE_LINE
+    def _hide_all_chord_frames(self) -> None:
+        self.line_chord_frame.grid_forget()
         self.measure_chord_frame.grid_forget()
+        self.grid_chord_frame.grid_forget()
+        self.line_chord_visible = False
         self.measure_chord_visible = False
+        self.grid_chord_visible = False
+
+    def show_line_chord_area(self) -> None:
+        self.chord_mode = CHORD_MODE_LINE
+        self._hide_all_chord_frames()
         self.line_chord_frame.grid(row=2, column=0, columnspan=11, padx=8, pady=(0, 8), sticky="ew")
         self.line_chord_visible = True
         self.hide_menu()
 
     def hide_line_chord_area(self) -> None:
-        """Hide the line-level chord area without deleting its value."""
         self.line_chord_frame.grid_forget()
         self.line_chord_visible = False
 
     def show_measure_chord_area(self) -> None:
-        """Show one independently editable chord entry for each measure."""
         self.chord_mode = CHORD_MODE_MEASURE
-        self.line_chord_frame.grid_forget()
-        self.line_chord_visible = False
+        self._hide_all_chord_frames()
         self._rebuild_measure_chord_inputs()
         self.measure_chord_frame.grid(row=2, column=0, columnspan=11, padx=8, pady=(0, 8), sticky="ew")
         self.measure_chord_visible = True
         self.hide_menu()
 
     def hide_measure_chord_area(self) -> None:
-        """Hide per-measure inputs without deleting the entered chords."""
         self.measure_chord_frame.grid_forget()
         self.measure_chord_visible = False
 
+    def show_grid_chord_area(self) -> None:
+        self.chord_mode = CHORD_MODE_GRID
+        self._hide_all_chord_frames()
+        self._rebuild_grid_chord_inputs()
+        self.grid_chord_frame.grid(row=2, column=0, columnspan=11, padx=8, pady=(0, 8), sticky="ew")
+        self.grid_chord_visible = True
+        self.hide_menu()
+
+    def hide_grid_chord_area(self) -> None:
+        self.grid_chord_frame.grid_forget()
+        self.grid_chord_visible = False
+
     def disable_chords(self) -> None:
-        """Disable chord generation while preserving typed values for later reuse."""
         self.chord_mode = CHORD_MODE_NONE
-        self.line_chord_frame.grid_forget()
-        self.measure_chord_frame.grid_forget()
-        self.line_chord_visible = False
-        self.measure_chord_visible = False
+        self._hide_all_chord_frames()
         self.hide_menu()
 
     def _measure_count(self) -> int | None:
-        """Return the positive measure count currently typed by the user."""
         try:
             count = int(self.measures_var.get())
         except ValueError:
@@ -270,19 +375,16 @@ class SegmentRow(ctk.CTkFrame):
         return count if count > 0 else None
 
     def _ensure_measure_chord_vars(self, count: int) -> None:
-        """Ensure enough StringVars exist while preserving previously typed values."""
         while len(self.measure_chord_vars) < count:
             self.measure_chord_vars.append(ctk.StringVar(value=""))
 
     def _rebuild_measure_chord_inputs(self) -> None:
-        """Rebuild the per-measure chord cells from the current measure count."""
         count = self._measure_count()
         if count is None:
             return
         self._ensure_measure_chord_vars(count)
         for widget in self.measure_chord_entries_frame.winfo_children():
             widget.destroy()
-
         for index in range(count):
             cell = ctk.CTkFrame(self.measure_chord_entries_frame)
             row, column = divmod(index, 4)
@@ -297,25 +399,93 @@ class SegmentRow(ctk.CTkFrame):
                 placeholder_text="Ex.: C, Am7, F#",
             ).grid(row=1, column=0, padx=6, pady=(1, 6), sticky="ew")
 
-    def _on_measure_count_changed(self, *_args) -> None:
-        """Synchronize visible chord cells after the measure count changes."""
+    def _grid_values(self):
+        try:
+            numerator = int(self.numerator_var.get())
+            denominator = int(self.denominator_var.get())
+            measures = int(self.measures_var.get())
+        except ValueError:
+            return None
+        unit = RHYTHM_LABEL_TO_UNIT.get(self.chord_grid_unit_var.get(), RHYTHM_QUARTER)
+        try:
+            durations = chord_grid_durations(numerator, denominator, measures, unit)
+        except ValueError:
+            return None
+        return numerator, denominator, measures, unit, durations
+
+    def _ensure_grid_chord_vars(self, count: int) -> None:
+        while len(self.grid_chord_vars) < count:
+            self.grid_chord_vars.append(ctk.StringVar(value=""))
+
+    def _rebuild_grid_chord_inputs(self) -> None:
+        for widget in self.grid_chord_entries_frame.winfo_children():
+            widget.destroy()
+        values = self._grid_values()
+        if values is None:
+            self.grid_status_var.set("Saisissez une signature et un nombre de mesures valides.")
+            return
+        numerator, denominator, _measures, unit, durations = values
+        self._ensure_grid_chord_vars(len(durations))
+        nominal = RHYTHM_UNIT_DURATIONS[unit]
+        one_measure = measure_duration(numerator, denominator)
+        elapsed = 0
+        for index, duration in enumerate(durations):
+            cell = ctk.CTkFrame(self.grid_chord_entries_frame)
+            row, column = divmod(index, 6)
+            cell.grid(row=row, column=column, padx=3, pady=3, sticky="ew")
+            cell.grid_columnconfigure(0, weight=1)
+            measure_number = int(elapsed // one_measure) + 1
+            adjusted = " · fin ajustée" if duration != nominal else ""
+            ctk.CTkLabel(
+                cell,
+                text=f"Case {index + 1} · M{measure_number}{adjusted}",
+                font=ctk.CTkFont(size=10),
+            ).grid(row=0, column=0, padx=5, pady=(4, 1), sticky="w")
+            ctk.CTkEntry(
+                cell,
+                textvariable=self.grid_chord_vars[index],
+                placeholder_text="C / , / vide",
+                width=110,
+            ).grid(row=1, column=0, padx=5, pady=(1, 5), sticky="ew")
+            elapsed += duration
+        self.grid_status_var.set(
+            f"{len(durations)} case(s) · subdivision {RHYTHM_UNIT_LABELS[unit]} · "
+            f"durée nominale LilyPond {lilypond_duration(nominal)}"
+        )
+
+    def _on_grid_unit_changed(self) -> None:
+        if self.chord_mode == CHORD_MODE_GRID:
+            self.after_idle(self._rebuild_grid_chord_inputs)
+
+    def _on_timing_changed(self, *_args) -> None:
         if self.chord_mode == CHORD_MODE_MEASURE:
             self.after_idle(self._rebuild_measure_chord_inputs)
+        elif self.chord_mode == CHORD_MODE_GRID:
+            self.after_idle(self._rebuild_grid_chord_inputs)
 
     def to_segment(self) -> Segment:
         """Read the row fields and return a validated Segment."""
         chord_symbol: str | None = None
         measure_chords: tuple[str | None, ...] = ()
+        grid_chords: tuple[str | None, ...] = ()
         chord_instrument = INSTRUMENT_LABEL_TO_VALUE.get(
             self.chord_instrument_var.get(), CHORD_INSTRUMENT_PIANO
         )
+        chord_grid_unit = RHYTHM_LABEL_TO_UNIT.get(
+            self.chord_grid_unit_var.get(), RHYTHM_QUARTER
+        )
 
         try:
+            bpm = int(self.bpm_var.get())
+            numerator = int(self.numerator_var.get())
+            denominator = int(self.denominator_var.get())
             measures = int(self.measures_var.get())
+
             if self.chord_mode == CHORD_MODE_LINE:
                 chord_symbol = self.chord_symbol_var.get().strip() or None
                 if chord_symbol:
                     chord_symbol_to_lilypond_chord(chord_symbol)
+
             elif self.chord_mode == CHORD_MODE_MEASURE:
                 if measures > 0:
                     self._ensure_measure_chord_vars(measures)
@@ -330,15 +500,33 @@ class SegmentRow(ctk.CTkFrame):
                     normalized.append(symbol)
                 measure_chords = tuple(normalized)
 
+            elif self.chord_mode == CHORD_MODE_GRID:
+                durations = chord_grid_durations(
+                    numerator, denominator, measures, chord_grid_unit
+                )
+                self._ensure_grid_chord_vars(len(durations))
+                normalized_grid: list[str | None] = []
+                for cell_index in range(len(durations)):
+                    value = self.grid_chord_vars[cell_index].get().strip() or None
+                    if value and value != ",":
+                        try:
+                            chord_symbol_to_lilypond_chord(value)
+                        except ChordParseError as exc:
+                            raise ValidationError(f"Case {cell_index + 1}: {exc}") from exc
+                    normalized_grid.append(value)
+                grid_chords = tuple(normalized_grid)
+
             segment = Segment(
-                bpm=int(self.bpm_var.get()),
-                numerator=int(self.numerator_var.get()),
-                denominator=int(self.denominator_var.get()),
+                bpm=bpm,
+                numerator=numerator,
+                denominator=denominator,
                 measures=measures,
                 chord_symbol=chord_symbol,
                 chord_instrument=chord_instrument,
                 chord_mode=self.chord_mode,
                 measure_chords=measure_chords,
+                chord_grid_unit=chord_grid_unit,
+                grid_chords=grid_chords,
             )
         except ChordParseError as exc:
             raise ValidationError(str(exc)) from exc

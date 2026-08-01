@@ -30,6 +30,29 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 
 - Rien pour le moment.
 
+## [0.3.0] - 2026-08-01
+
+### Ajouté
+
+- Nouveau mode **Accords selon une subdivision rythmique** dans le menu de ligne `☰`.
+- Subdivisions : blanche, blanche pointée, noire, noire pointée, croche et triolets de rondes, blanches, noires et croches.
+- Calcul dynamique du nombre de cases selon la signature et le nombre de mesures.
+- Champs `.gen` `chord_grid_unit` et `grid_chords`.
+- Module `rhythm.py` fondé sur des fractions exactes.
+- Tests unitaires pour les grilles rythmiques, les triolets et la sérialisation.
+
+### Changé
+
+- Les symboles d’accord sont maintenant portés par une piste de silences invisibles, ce qui permet leur placement exact à l’intérieur des mesures.
+- Les accords sont générés à partir d’une chronologie commune aux modes par ligne, par mesure et par subdivision.
+
+### Corrigé
+
+- Une virgule `,` prolonge l’accord précédent sans le rejouer.
+- Les prolongations traversant une barre de mesure sont divisées et liées dans la sortie LilyPond.
+- La dernière case est raccourcie lorsque la subdivision ne divise pas exactement la durée totale de la ligne.
+- Les accords avec extensions ou altérations parenthésées, notamment `G#m7(b13)`, `C7(#9)` et `C7(b9,#11)`, sont maintenant reconnus par le parseur.
+
 ## [0.2.0] - 2026-07-21
 
 ### Ajouté

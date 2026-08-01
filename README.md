@@ -1,4 +1,4 @@
-![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.2.0-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
+![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.3.0-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
 
 # GNU TrackGenerator
 
@@ -198,12 +198,15 @@ fluidsynth --version
 Si une commande est introuvable, il faut ajouter le dossier contenant l’exécutable correspondant au `PATH` de Windows.
 
 
-## Fonctionnalités de la version 0.2.0
+## Fonctionnalités de la version 0.3.0
 
 - Génération de click tracks programmables par segments : BPM, signature rythmique et nombre de mesures.
 - Menu de ligne `☰` au bout de chaque rangée.
 - Option **Accord au début de chaque ligne** dans le menu de ligne.
 - Option **Accord au début de chaque mesure**, avec une case distincte pour chaque mesure de la ligne.
+- Option **Accords selon une subdivision rythmique**, avec génération automatique du nombre de cases nécessaire pour toute la ligne.
+- Subdivisions disponibles : blanche, blanche pointée, noire, noire pointée, croche, triolet de rondes, triolet de blanches, triolet de noires et triolet de croches.
+- Une virgule `,` prolonge l’accord précédent sans le rejouer; une case vide crée un silence.
 - Saisie d’accords sous forme de symboles musicaux standard basés sur les notes A, B, C, D, E, F, G.
 - Conversion automatique des symboles d’accords en notes LilyPond.
 - Interprétation générique de la notation `addX`, par exemple `Dadd11`, `Cmadd9`, `C7add13`, `Fadd#11` ou `Bbaddb9`.
@@ -233,6 +236,38 @@ Pour définir une progression harmonique mesure par mesure :
 Le menu permet aussi de choisir **Accord → Désactiver les accords** afin de revenir à une ligne de click simple tout en conservant temporairement les valeurs saisies dans l’interface.
 
 Chaque case correspond exactement à une mesure. L’accord est généré avec la durée complète de cette mesure, y compris pour des signatures complexes comme `7/8`, `5/4` ou `27/16`. Une case laissée vide produit une mesure sans accord.
+
+### Accords selon une subdivision rythmique
+
+Pour créer des changements d’accords plus fréquents qu’une fois par mesure :
+
+1. Cliquer sur le bouton `☰` de la ligne.
+2. Choisir **Accord → Accords selon une subdivision rythmique**.
+3. Choisir la valeur de note utilisée pour découper la ligne.
+4. Remplir les cases générées automatiquement.
+5. Saisir une virgule `,` dans une case pour prolonger l’accord précédent sans nouvelle attaque.
+6. Laisser une case vide pour créer un silence pendant cette subdivision.
+
+Exemple : une ligne de quatre mesures en `4/4` divisée en noires affiche **16 cases**. Les triolets utilisent leur durée réelle : un triolet de noires produit 24 cases sur la même ligne et un triolet de croches en produit 48.
+
+Lorsque la subdivision choisie ne divise pas exactement la durée totale de la ligne, la dernière case est raccourcie automatiquement afin que la séquence se termine exactement à la fin de la dernière mesure.
+
+Les accords prolongés par une virgule sont fusionnés dans la sortie MIDI/WAV. Lorsqu’une prolongation traverse une barre de mesure, GNU TrackGenerator divise la notation à la barre et ajoute une liaison LilyPond afin d’éviter une nouvelle attaque sonore.
+
+Exemple de sauvegarde `.gen` :
+
+```json
+{
+  "bpm": 120,
+  "numerator": 4,
+  "denominator": 4,
+  "measures": 1,
+  "chord_mode": "grid",
+  "chord_grid_unit": "quarter",
+  "grid_chords": ["C", ",", "G", null],
+  "chord_instrument": "piano"
+}
+```
 
 ### Affichage des accords dans le PDF
 
@@ -273,7 +308,7 @@ TiMidity peut convertir un MIDI en WAV avec l’option `-Ow`, mais il doit avoir
 
 ### Accords supportés
 
-La saisie d’accord utilise des symboles comme `C`, `Cm`, `C7`, `F#maj7`, `Bb9`, `C7#9` ou `Dadd11`. Les formes suivantes sont prises en charge pour toutes les fondamentales A à G, avec accidentels `#` ou `b` lorsque nécessaire.
+La saisie d’accord utilise des symboles comme `C`, `Cm`, `C7`, `F#maj7`, `Bb9`, `C7#9`, `Dadd11` ou `G#m7(b13)`. Les formes suivantes sont prises en charge pour toutes les fondamentales A à G, avec accidentels `#` ou `b` lorsque nécessaire.
 
 La famille `addX` est interprétée de manière générique : le logiciel part de l’accord de base, puis ajoute le degré demandé sans qu’une définition particulière soit nécessaire pour chaque accord. Exemples :
 
@@ -283,7 +318,14 @@ La famille `addX` est interprétée de manière générique : le logiciel part d
 - `Fadd#11` → `1, 3, 5, #11`;
 - `Bbaddb9` → `1, 3, 5, b9`.
 
-Les formes parenthésées, comme `D(add11)`, sont également acceptées.
+Les formes parenthésées, comme `D(add11)`, sont également acceptées. Le parseur comprend aussi les extensions et altérations appliquées à une qualité existante :
+
+- `G#m7(b13)` → `1, b3, 5, b7, b13`;
+- `C7(#9)` → `1, 3, 5, b7, #9`;
+- `C7(b9,#11)` → `1, 3, 5, b7, b9, #11`;
+- `Cm7(b5)` → `1, b3, b5, b7`.
+
+Dans une altération parenthésée, un degré altéré remplace la version naturelle du même degré lorsqu’elle existe. Ainsi, `Cm7(b5)` remplace la quinte juste par une quinte diminuée.
 
 | Notation | Degrés |
 |---|---|
@@ -316,7 +358,8 @@ Les formes parenthésées, comme `D(add11)`, sont également acceptées.
 | `Cm11` | `1, b3, 5, b7, 9, 11` |
 | `C13` | `1, 3, 5, b7, 9, 11, 13` |
 | `Cmaj13` | `1, 3, 5, 7, 9, 11, 13` |
-| `C7#9` | `1, 3, 5, b7, #9` |
+| `C7#9`, `C7(#9)` | `1, 3, 5, b7, #9` |
+| `G#m7(b13)` | `1, b3, 5, b7, b13` |
 
 ## Fonctionnalités prévues
 

@@ -2,7 +2,7 @@
 
 ## Objectif
 
-GNU TrackGenerator génère des pistes de métronome programmables et reproductibles à partir de segments musicaux. Chaque segment définit un tempo, une signature rythmique, un nombre de mesures et, optionnellement, soit un accord répété sur toute la ligne, soit un accord indépendant pour chaque mesure.
+GNU TrackGenerator génère des pistes de métronome programmables et reproductibles à partir de segments musicaux. Chaque segment définit un tempo, une signature rythmique, un nombre de mesures et, optionnellement, soit un accord répété sur toute la ligne, soit un accord indépendant pour chaque mesure, soit une grille d’accords fondée sur une subdivision rythmique.
 
 ## Hors périmètre actuel
 
@@ -30,10 +30,18 @@ GNU TrackGenerator génère des pistes de métronome programmables et reproducti
 - `REQ-015` — Chaque accord par mesure peut être différent et dure une mesure complète.
 - `REQ-016` — Une case d’accord vide génère une mesure sans accord.
 - `REQ-017` — Une modification du nombre de mesures met à jour les cases visibles sans effacer les valeurs encore applicables.
+- `REQ-018` — Le menu permet d’activer une grille d’accords selon une subdivision rythmique.
+- `REQ-019` — Les subdivisions disponibles sont la blanche, la blanche pointée, la noire, la noire pointée, la croche et les triolets de rondes, blanches, noires et croches.
+- `REQ-020` — Le nombre de cases est calculé automatiquement à partir de la durée totale de la ligne.
+- `REQ-021` — Une virgule prolonge l’accord précédent sans nouvelle attaque.
+- `REQ-022` — Une case vide représente un silence.
+- `REQ-023` — Une prolongation traversant une barre de mesure est liée dans la sortie LilyPond.
 
 ## Accords supportés
 
 Le parseur prend en charge une logique générique `addX`. Le suffixe peut être appliqué à un accord majeur implicite (`Dadd11`) ou à une qualité déjà reconnue (`Cmadd9`, `C7add13`). Les degrés altérés comme `add#11` et `addb9` sont également acceptés.
+
+Le parseur prend aussi en charge les modifications parenthésées appliquées à une qualité reconnue, par exemple `G#m7(b13)`, `C7(#9)` ou `C7(b9,#11)`. Plusieurs modifications peuvent être séparées par des virgules. Lorsqu’un degré altéré existe déjà sous une autre forme dans l’accord de base, il est remplacé.
 
 | Notation | Degrés |
 |---|---|
@@ -49,6 +57,7 @@ Le parseur prend en charge une logique générique `addX`. Le suffixe peut être
 | `Cadd2`, `Cμ` | `1, 2, 3, 5` |
 | `Cadd9` | `1, 3, 5, 9` |
 | `Dadd11` | `1, 3, 5, 11` |
+| `G#m7(b13)` | `1, b3, 5, b7, b13` |
 | `Fadd#11` | `1, 3, 5, #11` |
 | `Cmadd9` | `1, b3, 5, 9` |
 | `C7add13` | `1, 3, 5, b7, 13` |
@@ -78,12 +87,12 @@ Le parseur prend en charge une logique générique `addX`. Le suffixe peut être
 
 ## Formats de données
 
-Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, `chord_mode`, `measure_chords` et `chord_instrument` sont optionnels selon le mode harmonique choisi.
+Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, `chord_mode`, `measure_chords`, `chord_grid_unit`, `grid_chords` et `chord_instrument` sont optionnels selon le mode harmonique choisi.
 
 ```json
 {
   "app": "GNU TrackGenerator",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "soundfont_path": null,
   "segments": [
     {
@@ -99,6 +108,23 @@ Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, 
 }
 ```
 
+
+
+Exemple du mode rythmique :
+
+```json
+{
+  "bpm": 120,
+  "numerator": 4,
+  "denominator": 4,
+  "measures": 1,
+  "chord_mode": "grid",
+  "chord_grid_unit": "quarter",
+  "grid_chords": ["C", ",", "G", null],
+  "chord_instrument": "piano"
+}
+```
+
 ## Critères d’acceptation
 
 - Un accord `C7#9` est converti en `<c e g bes ees'>`.
@@ -108,6 +134,8 @@ Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, 
 - Une progression `C`, `Am7`, `F`, `G7` génère quatre accords distincts, chacun avec la durée complète de sa mesure.
 - Un projet sans accord continue de générer seulement la portée de click.
 - La conversion MIDI vers WAV tente TiMidity avant FluidSynth.
+- Quatre mesures en `4/4` divisées en noires produisent 16 cases.
+- La séquence `["C", ",", "G", null]` produit un accord C prolongé sur une blanche, un accord G sur une noire et un silence sur une noire.
 
 
 ## Affichage PDF des accords

@@ -65,9 +65,9 @@ class MeasureChordLilyPondTests(unittest.TestCase):
         )
         source = build_lilypond_source(project, title="mesures")
 
-        self.assertIn('bd8^\\markup { \\bold "C" }', source)
-        self.assertIn('bd8^\\markup { \\bold "Am7" }', source)
-        self.assertIn('bd8^\\markup { \\bold "F" }', source)
+        self.assertIn('s1*7/8^\\markup { \\bold "C" }', source)
+        self.assertIn('s1*7/8^\\markup { \\bold "Am7" }', source)
+        self.assertIn('s1*7/8^\\markup { \\bold "F" }', source)
         self.assertIn('<c e g>1*7/8', source)
         self.assertIn("<a c' e' g'>1*7/8", source)
         self.assertIn("<f a c'>1*7/8", source)
@@ -86,8 +86,8 @@ class MeasureChordLilyPondTests(unittest.TestCase):
             ]
         )
         source = build_lilypond_source(project, title="add11")
-        self.assertIn('bd4^\\markup { \\bold "Dadd11" }', source)
-        self.assertIn("<d fis a g'>1*4/4", source)
+        self.assertIn('s1^\\markup { \\bold "Dadd11" }', source)
+        self.assertIn("<d fis a g'>1", source)
 
     def test_blank_measure_chord_generates_a_full_measure_rest(self) -> None:
         project = ProjectData(
@@ -104,7 +104,7 @@ class MeasureChordLilyPondTests(unittest.TestCase):
         )
         source = build_lilypond_source(project, title="silence")
         self.assertIn("r1*5/4 |", source)
-        self.assertIn("% Mesure 2: silence", source)
+        self.assertIn("s1*5/4 |", source)
 
     def test_per_measure_guitar_chords_generate_matching_fretboards(self) -> None:
         project = ProjectData(
@@ -121,9 +121,9 @@ class MeasureChordLilyPondTests(unittest.TestCase):
             ]
         )
         source = build_lilypond_source(project, title="guitare")
-        self.assertIn("c1*4/4 |", source)
-        self.assertIn("a1*4/4:m7 |", source)
-        self.assertIn("<c e g>1*4/4\\arpeggio", source)
+        self.assertIn("c1 |", source)
+        self.assertIn("a1:m7 |", source)
+        self.assertIn("<c e g>1\\arpeggio", source)
 
 
 if __name__ == "__main__":
