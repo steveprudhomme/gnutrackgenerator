@@ -165,6 +165,26 @@ Dans le PDF, le symbole exact de l’accord est imprimé au-dessus de la partiti
 
 Pour la **Guitare sèche**, l’accord est généré avec `\arpeggio` dans LilyPond afin d’obtenir un rendu de type strum/arpège. Lorsque LilyPond possède un diagramme de guitare prédéfini pour l’accord, une ligne `FretBoards` est aussi ajoutée au-dessus de la partition. Les accords plus complexes, comme `C7#9`, restent affichés comme symboles textuels même si aucun diagramme prédéfini n’est disponible.
 
+## Configurer un arpégiateur
+
+Sous chaque champ d’accord se trouve un bouton **A**. `A✓` indique que l’arpégiateur de cette case est actif.
+
+1. Saisir l’accord dans la case.
+2. Cliquer sur **A**.
+3. Activer l’arpégiateur.
+4. Choisir le mouvement, le nombre d’octaves et la valeur rythmique.
+5. Activer au besoin la valeur pointée.
+6. Saisir `0` pour aucun N-olet, ou un nombre de `3` à `32`.
+7. Cliquer sur **Enregistrer**.
+
+Les trois mouvements disponibles sont :
+
+- descendre puis remonter;
+- monter puis redescendre;
+- jouer les notes au hasard.
+
+Le motif aléatoire est reproductible. Un N-olet `5` signifie cinq notes dans le temps de quatre. Dans une grille, une virgule prolonge l’accord précédent et conserve son arpégiateur; le bouton A de la case contenant la virgule n’est donc pas utilisé.
+
 ## Vérifier TiMidity
 
 La conversion MIDI vers WAV utilise maintenant **TiMidity en priorité**. FluidSynth reste disponible comme solution de repli.

@@ -422,3 +422,22 @@ def chord_symbol_to_lilypond_fretboard_chord(symbol: str) -> str | None:
         return None
     root = ROOT_TO_LILYPOND_CHORDMODE[(root_letter, accidental)]
     return root + LILYPOND_FRETBOARD_SUFFIXES[suffix]
+
+
+def pitch_semitone_to_lilypond(total: int) -> str:
+    """Public wrapper converting an absolute semitone value to LilyPond."""
+    return _lilypond_note_from_total_semitones(total)
+
+
+def chord_symbol_to_arpeggio_semitones(symbol: str, octaves: int = 1) -> list[int]:
+    """Return sorted chord pitches expanded over the requested octave range.
+
+    Compound chord extensions are folded into pitch classes for the arpeggiator,
+    then repeated over the selected number of octaves.  This produces a regular
+    playable pattern while keeping all distinct chord tones.
+    """
+    if octaves <= 0:
+        raise ChordParseError("Le nombre d'octaves de l'arpégiateur doit être positif.")
+    _root, root_pc, _suffix, quality = normalize_chord_symbol(symbol)
+    intervals = sorted({degree_to_semitones(degree) % 12 for degree in quality.degrees})
+    return [root_pc + interval + 12 * octave for octave in range(octaves) for interval in intervals]

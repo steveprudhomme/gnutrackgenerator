@@ -27,6 +27,13 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Callable
 
+from .arpeggiator import (
+    ARP_PATTERN_LABELS,
+    ARP_RHYTHM_LABELS,
+    ArpeggiatorError,
+    ArpeggiatorSettings,
+    generate_arpeggio_steps,
+)
 from .chords import (
     ChordParseError,
     chord_symbol_to_lilypond_chord,
@@ -246,14 +253,21 @@ def _segment_timeline_events(segment: Segment) -> tuple[ChordTimelineEvent, ...]
 
     if mode == CHORD_MODE_LINE:
         return tuple(
-            ChordTimelineEvent(segment.chord_symbol, full_measure)
+            ChordTimelineEvent(
+                segment.chord_symbol,
+                full_measure,
+                segment.chord_arpeggiator,
+            )
             for _ in range(segment.measures)
         )
 
     if mode == CHORD_MODE_MEASURE:
         return tuple(
-            ChordTimelineEvent(symbol, full_measure)
-            for symbol in segment.measure_chords
+            ChordTimelineEvent(symbol, full_measure, arpeggiator)
+            for symbol, arpeggiator in zip(
+                segment.measure_chords,
+                segment.effective_measure_arpeggiators,
+            )
         )
 
     if mode == CHORD_MODE_GRID:
@@ -264,11 +278,11 @@ def _segment_timeline_events(segment: Segment) -> tuple[ChordTimelineEvent, ...]
             segment.chord_grid_unit,
         )
         try:
-            return resolve_grid_events(segment.grid_chords, durations)
+            return resolve_grid_events(segment.grid_chords, durations, segment.effective_grid_arpeggiators)
         except ValueError as exc:
             raise GenerationError(str(exc)) from exc
 
-    return (ChordTimelineEvent(None, full_measure * segment.measures),)
+    return (ChordTimelineEvent(None, full_measure * segment.measures, None),)
 
 
 def _segment_timeline_chunks(segment: Segment):
@@ -322,46 +336,97 @@ def _build_chord_label_music(project: ProjectData) -> str:
     return "\n".join(music_lines).rstrip()
 
 
-def _chord_chunk_token(
-    segment: Segment,
-    segment_index: int,
-    symbol: str | None,
+def _render_sustained_event(
+    base_token: str,
     duration: Fraction,
-    show_label: bool,
-    continues_after: bool,
-) -> str:
-    """Convert one timeline chunk to audible LilyPond chord/rest syntax."""
-    lily_duration = lilypond_duration(duration)
-    if not symbol:
-        return f"r{lily_duration}"
+    one_measure: Fraction,
+    offset: Fraction,
+    *,
+    tie: bool,
+    first_suffix: str = "",
+) -> tuple[list[str], Fraction]:
+    """Render one chord/rest across bar lines and return the new offset."""
+    tokens: list[str] = []
+    remaining = duration
+    first_piece = True
+    while remaining > 0:
+        available = one_measure - offset
+        current = min(remaining, available)
+        remaining_after = remaining - current
+        token = f"{base_token}{lilypond_duration(current)}"
+        if first_piece and first_suffix:
+            token += first_suffix
+        if tie and remaining_after > 0:
+            token += "~"
+        offset += current
+        if offset == one_measure:
+            token += " |"
+            offset = Fraction(0, 1)
+        tokens.append(token)
+        remaining = remaining_after
+        first_piece = False
+    return tokens, offset
 
+
+def _render_arpeggio_event(
+    symbol: str,
+    duration: Fraction,
+    settings: ArpeggiatorSettings,
+    one_measure: Fraction,
+    offset: Fraction,
+    *,
+    seed_key: str,
+) -> tuple[list[str], Fraction]:
+    """Render a real single-note arpeggio, including visible N-olet groups."""
     try:
-        chord = chord_symbol_to_lilypond_chord(symbol)
-    except ChordParseError as exc:
-        raise GenerationError(
-            f"Accord invalide à la rangée {segment_index}: {exc}"
-        ) from exc
+        steps = generate_arpeggio_steps(symbol, duration, settings, seed_key=seed_key)
+    except (ChordParseError, ArpeggiatorError) as exc:
+        raise GenerationError(f"Impossible de générer l'arpège de {symbol}: {exc}") from exc
 
-    token = f"{chord}{lily_duration}"
-    if segment.chord_instrument == CHORD_INSTRUMENT_ACOUSTIC_GUITAR and show_label:
-        token += "\\arpeggio"
-    if continues_after:
-        token += "~"
-    return token
+    tokens: list[str] = []
+    tuplet_count = settings.normalized_tuplet_count
+    scale = Fraction(tuplet_count - 1, tuplet_count) if tuplet_count else Fraction(1, 1)
+
+    for step in steps:
+        if step.starts_tuplet:
+            tokens.append(f"\\tuplet {tuplet_count}/{tuplet_count - 1} {{")
+
+        remaining = step.actual_duration
+        first_piece = True
+        while remaining > 0:
+            available = one_measure - offset
+            current_actual = min(remaining, available)
+            current_written = current_actual / scale
+            remaining_after = remaining - current_actual
+            token = f"{step.note}{lilypond_duration(current_written)}"
+            if remaining_after > 0:
+                token += "~"
+            offset += current_actual
+            if offset == one_measure:
+                token += " |"
+                offset = Fraction(0, 1)
+            tokens.append(token)
+            remaining = remaining_after
+            first_piece = False
+
+        if step.ends_tuplet:
+            tokens.append("}")
+
+    return tokens, offset
 
 
 def _build_chord_music(project: ProjectData) -> str:
-    """Build the optional audible chord staff music body."""
+    """Build the optional audible chord/arpeggiator staff music body."""
     music_lines: list[str] = []
     current_instrument: str | None = None
 
-    for index, segment in enumerate(project.segments, start=1):
+    for segment_index, segment in enumerate(project.segments, start=1):
         instrument = segment.chord_instrument
         midi_instrument = LILYPOND_MIDI_INSTRUMENTS.get(instrument, "acoustic grand")
         instrument_name = LILYPOND_INSTRUMENT_NAMES.get(instrument, "Accords")
         music_lines.extend(
             [
-                f"  % Accords segment {index}",
+                f"  % Accords segment {segment_index}",
                 f"  \\time {segment.numerator}/{segment.denominator}",
                 f"  \\tempo {segment.denominator} = {segment.bpm}",
             ]
@@ -375,21 +440,60 @@ def _build_chord_music(project: ProjectData) -> str:
             )
             current_instrument = instrument
 
-        if segment.chord_instrument == CHORD_INSTRUMENT_ACOUSTIC_GUITAR:
-            music_lines.append("  \\arpeggioArrowUp")
+        one_measure = measure_duration(segment.numerator, segment.denominator)
+        offset = Fraction(0, 1)
+        for event_index, event in enumerate(_segment_timeline_events(segment), start=1):
+            if not event.symbol:
+                tokens, offset = _render_sustained_event(
+                    "r", event.duration, one_measure, offset, tie=False
+                )
+            elif event.arpeggiator and event.arpeggiator.enabled:
+                pattern = ARP_PATTERN_LABELS.get(event.arpeggiator.pattern, event.arpeggiator.pattern)
+                rhythm = ARP_RHYTHM_LABELS.get(event.arpeggiator.rhythm, event.arpeggiator.rhythm)
+                dotted = " pointée" if event.arpeggiator.dotted else ""
+                tuplet = (
+                    f", {event.arpeggiator.normalized_tuplet_count}-olet"
+                    if event.arpeggiator.normalized_tuplet_count
+                    else ""
+                )
+                music_lines.append(
+                    f"  % Arpégiateur: {pattern}, {event.arpeggiator.octaves} octave(s), "
+                    f"{rhythm}{dotted}{tuplet}"
+                )
+                tokens, offset = _render_arpeggio_event(
+                    event.symbol,
+                    event.duration,
+                    event.arpeggiator,
+                    one_measure,
+                    offset,
+                    seed_key=f"segment={segment_index};event={event_index}",
+                )
+            else:
+                try:
+                    chord = chord_symbol_to_lilypond_chord(event.symbol)
+                except ChordParseError as exc:
+                    raise GenerationError(
+                        f"Accord invalide à la rangée {segment_index}: {exc}"
+                    ) from exc
+                suffix = ""
+                if segment.chord_instrument == CHORD_INSTRUMENT_ACOUSTIC_GUITAR:
+                    suffix = "\\arpeggio"
+                    music_lines.append("  \\arpeggioArrowUp")
+                tokens, offset = _render_sustained_event(
+                    chord,
+                    event.duration,
+                    one_measure,
+                    offset,
+                    tie=True,
+                    first_suffix=suffix,
+                )
 
-        for chunk in _segment_timeline_chunks(segment):
-            token = _chord_chunk_token(
-                segment,
-                index,
-                chunk.symbol,
-                chunk.duration,
-                chunk.show_label,
-                chunk.continues_after,
+            music_lines.extend(f"  {token}" for token in tokens)
+
+        if offset != 0:
+            raise GenerationError(
+                f"La rangée {segment_index} ne remplit pas un nombre entier de mesures."
             )
-            if chunk.ends_measure:
-                token += " |"
-            music_lines.append(f"  {token}")
         music_lines.append("")
 
     return "\n".join(music_lines).rstrip()

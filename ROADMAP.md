@@ -79,7 +79,22 @@ Objectif : permettre des changements d’accords à l’intérieur des mesures s
 - Prévisualisation textuelle de la grille avant génération.
 
 
-## v0.4.0 — Expérience utilisateur
+## v0.4.0 — Arpégiateur par accord — réalisé
+
+Objectif : permettre à chaque champ d’accord de définir son propre motif arpégé.
+
+### Éléments intégrés
+
+- Bouton **A** sous chaque accord des trois modes harmonique.
+- Activation ou désactivation individuelle de l’arpégiateur.
+- Motifs descendant-montant, montant-descendant et aléatoire reproductible.
+- Choix du nombre d’octaves.
+- Valeurs rythmiques de la ronde à la double croche et équivalents pointés.
+- N-olets génériques saisis par un nombre de 3 à 32.
+- Sauvegarde rétrocompatible dans les champs `arpeggiator`, `measure_arpeggiators` et `grid_arpeggiators`.
+- Génération de notes individuelles, de N-olets LilyPond et de MIDI/WAV correspondants.
+
+## v0.5.0 — Expérience utilisateur
 
 Objectif : rendre l’application plus agréable et plus sûre.
 
@@ -92,7 +107,7 @@ Objectif : rendre l’application plus agréable et plus sûre.
 - Meilleure validation en temps réel des champs.
 - Panneau de configuration pour les chemins de LilyPond, FluidSynth, TiMidity et SoundFont.
 
-## v0.5.0 — Architecture audio avancée
+## v0.6.0 — Architecture audio avancée
 
 Objectif : améliorer la production audio.
 
@@ -103,7 +118,7 @@ Objectif : améliorer la production audio.
 - Génération stéréo ou mono.
 - Export séparé par segment.
 
-## v0.6.0 — Édition avancée de projet
+## v0.7.0 — Édition avancée de projet
 
 Objectif : permettre une écriture plus proche d’une structure de pièce.
 

@@ -9,9 +9,10 @@ safe to unit-test in isolation and represents the musical/project data model.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
+from .arpeggiator import ArpeggiatorError, ArpeggiatorSettings
 from .rhythm import (
     RHYTHM_QUARTER,
     SUPPORTED_RHYTHM_UNITS,
@@ -20,7 +21,7 @@ from .rhythm import (
 )
 
 APP_NAME = "GNU TrackGenerator"
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.4.0"
 
 # LilyPond note durations are represented by powers of two: 1, 2, 4, 8, 16...
 SUPPORTED_DENOMINATORS = {1, 2, 4, 8, 16, 32, 64}
@@ -52,6 +53,10 @@ class ValidationError(ValueError):
     """Raised when the project or one of its musical segments is invalid."""
 
 
+def _default_arpeggiators(count: int) -> tuple[ArpeggiatorSettings, ...]:
+    return tuple(ArpeggiatorSettings() for _ in range(max(0, count)))
+
+
 @dataclass(frozen=True)
 class Segment:
     """A programmable click-track segment.
@@ -59,6 +64,10 @@ class Segment:
     Chords can be disabled, repeated for the whole line, entered once per
     measure, or entered in a rhythmic grid. In grid mode, an empty cell means
     silence and a comma extends the previous chord without retriggering it.
+
+    Every chord-entry field can also carry its own arpeggiator configuration.
+    Older `.gen` files remain valid because missing settings default to a
+    disabled arpeggiator.
     """
 
     bpm: int
@@ -71,6 +80,9 @@ class Segment:
     measure_chords: tuple[str | None, ...] = ()
     chord_grid_unit: str = RHYTHM_QUARTER
     grid_chords: tuple[str | None, ...] = ()
+    chord_arpeggiator: ArpeggiatorSettings = field(default_factory=ArpeggiatorSettings)
+    measure_arpeggiators: tuple[ArpeggiatorSettings, ...] = ()
+    grid_arpeggiators: tuple[ArpeggiatorSettings, ...] = ()
 
     @property
     def effective_chord_mode(self) -> str:
@@ -86,13 +98,19 @@ class Segment:
 
     @property
     def chord_symbols_by_measure(self) -> tuple[str | None, ...]:
-        """Return one symbol for every measure in the legacy line/measure modes."""
+        """Return one symbol for every measure in the line/measure modes."""
         mode = self.effective_chord_mode
         if mode == CHORD_MODE_LINE:
             return tuple(self.chord_symbol for _ in range(self.measures))
         if mode == CHORD_MODE_MEASURE:
             return self.measure_chords
         return tuple(None for _ in range(self.measures))
+
+    @property
+    def effective_measure_arpeggiators(self) -> tuple[ArpeggiatorSettings, ...]:
+        if self.measure_arpeggiators:
+            return self.measure_arpeggiators
+        return _default_arpeggiators(self.measures)
 
     @property
     def chord_grid_durations(self):
@@ -105,12 +123,24 @@ class Segment:
         )
 
     @property
+    def effective_grid_arpeggiators(self) -> tuple[ArpeggiatorSettings, ...]:
+        if self.grid_arpeggiators:
+            return self.grid_arpeggiators
+        return _default_arpeggiators(len(self.chord_grid_durations))
+
+    @property
     def has_any_chord(self) -> bool:
         """Return whether at least one audible chord is defined."""
         mode = self.effective_chord_mode
         if mode == CHORD_MODE_GRID:
             return any(value not in {None, "", ","} for value in self.grid_chords)
         return any(symbol for symbol in self.chord_symbols_by_measure)
+
+    def _validate_arpeggiator(self, settings: ArpeggiatorSettings, context: str) -> None:
+        try:
+            settings.validate()
+        except ArpeggiatorError as exc:
+            raise ValidationError(f"{context}: {exc}") from exc
 
     def validate(self) -> None:
         """Validate one segment and raise a readable error if invalid."""
@@ -138,6 +168,7 @@ class Segment:
                 raise ValidationError("Un accord doit être saisi pour le mode par ligne.")
             if self.measure_chords or self.grid_chords:
                 raise ValidationError("Un segment ne peut utiliser qu'un seul mode d'accord.")
+            self._validate_arpeggiator(self.chord_arpeggiator, "Arpégiateur de la ligne")
 
         elif mode == CHORD_MODE_MEASURE:
             if self.chord_symbol or self.grid_chords:
@@ -146,6 +177,12 @@ class Segment:
                 raise ValidationError(
                     "Le nombre d'accords par mesure doit correspondre au nombre de mesures de la ligne."
                 )
+            if self.measure_arpeggiators and len(self.measure_arpeggiators) != self.measures:
+                raise ValidationError(
+                    "Le nombre de réglages d'arpégiateur doit correspondre au nombre de mesures."
+                )
+            for index, settings in enumerate(self.effective_measure_arpeggiators, start=1):
+                self._validate_arpeggiator(settings, f"Arpégiateur de la mesure {index}")
 
         elif mode == CHORD_MODE_GRID:
             if self.chord_symbol or self.measure_chords:
@@ -160,41 +197,50 @@ class Segment:
                 raise ValidationError(
                     "Le nombre d'accords rythmiques doit correspondre au nombre de cases calculé pour la ligne."
                 )
+            if self.grid_arpeggiators and len(self.grid_arpeggiators) != len(durations):
+                raise ValidationError(
+                    "Le nombre de réglages d'arpégiateur doit correspondre au nombre de cases rythmiques."
+                )
+            for index, settings in enumerate(self.effective_grid_arpeggiators, start=1):
+                self._validate_arpeggiator(settings, f"Arpégiateur de la case {index}")
             try:
-                resolve_grid_events(self.grid_chords, durations)
+                resolve_grid_events(
+                    self.grid_chords,
+                    durations,
+                    self.effective_grid_arpeggiators,
+                )
             except ValueError as exc:
                 raise ValidationError(str(exc)) from exc
 
-
     def to_dict(self) -> dict[str, Any]:
         """Serialize the segment to a JSON-friendly dictionary."""
-        data = asdict(self)
         mode = self.effective_chord_mode
-        data["chord_mode"] = mode
-        data["measure_chords"] = list(self.measure_chords)
-        data["grid_chords"] = list(self.grid_chords)
+        data: dict[str, Any] = {
+            "bpm": self.bpm,
+            "numerator": self.numerator,
+            "denominator": self.denominator,
+            "measures": self.measures,
+            "chord_mode": mode,
+            "chord_instrument": self.chord_instrument,
+        }
 
-        if mode == CHORD_MODE_NONE:
-            for key in (
-                "chord_symbol",
-                "chord_instrument",
-                "chord_mode",
-                "measure_chords",
-                "chord_grid_unit",
-                "grid_chords",
-            ):
-                data.pop(key, None)
-        elif mode == CHORD_MODE_LINE:
-            data.pop("measure_chords", None)
-            data.pop("chord_grid_unit", None)
-            data.pop("grid_chords", None)
+        if mode == CHORD_MODE_LINE:
+            data["chord_symbol"] = self.chord_symbol
+            data["arpeggiator"] = self.chord_arpeggiator.to_dict()
         elif mode == CHORD_MODE_MEASURE:
-            data.pop("chord_symbol", None)
-            data.pop("chord_grid_unit", None)
-            data.pop("grid_chords", None)
+            data["measure_chords"] = list(self.measure_chords)
+            data["measure_arpeggiators"] = [
+                settings.to_dict() for settings in self.effective_measure_arpeggiators
+            ]
         elif mode == CHORD_MODE_GRID:
-            data.pop("chord_symbol", None)
-            data.pop("measure_chords", None)
+            data["chord_grid_unit"] = self.chord_grid_unit
+            data["grid_chords"] = list(self.grid_chords)
+            data["grid_arpeggiators"] = [
+                settings.to_dict() for settings in self.effective_grid_arpeggiators
+            ]
+        else:
+            data.pop("chord_mode", None)
+            data.pop("chord_instrument", None)
         return data
 
     @classmethod
@@ -230,19 +276,50 @@ class Segment:
                 else:
                     raw_mode = CHORD_MODE_NONE
 
+            measures = int(payload["measures"])
+            numerator = int(payload["numerator"])
+            denominator = int(payload["denominator"])
+            chord_grid_unit = str(payload.get("chord_grid_unit", RHYTHM_QUARTER))
+
+            chord_arpeggiator = ArpeggiatorSettings.from_dict(payload.get("arpeggiator"))
+
+            raw_measure_arpeggiators = payload.get("measure_arpeggiators", []) or []
+            if not isinstance(raw_measure_arpeggiators, (list, tuple)):
+                raise TypeError("measure_arpeggiators must be a list")
+            measure_arpeggiators = tuple(
+                ArpeggiatorSettings.from_dict(item) for item in raw_measure_arpeggiators
+            )
+            if raw_mode == CHORD_MODE_MEASURE and not measure_arpeggiators:
+                measure_arpeggiators = _default_arpeggiators(measures)
+
+            raw_grid_arpeggiators = payload.get("grid_arpeggiators", []) or []
+            if not isinstance(raw_grid_arpeggiators, (list, tuple)):
+                raise TypeError("grid_arpeggiators must be a list")
+            grid_arpeggiators = tuple(
+                ArpeggiatorSettings.from_dict(item) for item in raw_grid_arpeggiators
+            )
+            if raw_mode == CHORD_MODE_GRID and not grid_arpeggiators:
+                slot_count = len(
+                    chord_grid_durations(numerator, denominator, measures, chord_grid_unit)
+                )
+                grid_arpeggiators = _default_arpeggiators(slot_count)
+
             segment = cls(
                 bpm=int(payload["bpm"]),
-                numerator=int(payload["numerator"]),
-                denominator=int(payload["denominator"]),
-                measures=int(payload["measures"]),
+                numerator=numerator,
+                denominator=denominator,
+                measures=measures,
                 chord_symbol=str(chord_symbol).strip() if chord_symbol else None,
                 chord_instrument=str(payload.get("chord_instrument", CHORD_INSTRUMENT_PIANO)),
                 chord_mode=str(raw_mode),
                 measure_chords=measure_chords,
-                chord_grid_unit=str(payload.get("chord_grid_unit", RHYTHM_QUARTER)),
+                chord_grid_unit=chord_grid_unit,
                 grid_chords=grid_chords,
+                chord_arpeggiator=chord_arpeggiator,
+                measure_arpeggiators=measure_arpeggiators,
+                grid_arpeggiators=grid_arpeggiators,
             )
-        except (KeyError, TypeError, ValueError) as exc:
+        except (KeyError, TypeError, ValueError, ArpeggiatorError) as exc:
             raise ValidationError("Segment invalide dans le fichier .gen.") from exc
         segment.validate()
         return segment

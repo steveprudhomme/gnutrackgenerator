@@ -1,4 +1,4 @@
-![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.3.0-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
+![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.4.0-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
 
 # GNU TrackGenerator
 
@@ -198,7 +198,7 @@ fluidsynth --version
 Si une commande est introuvable, il faut ajouter le dossier contenant l’exécutable correspondant au `PATH` de Windows.
 
 
-## Fonctionnalités de la version 0.3.0
+## Fonctionnalités de la version 0.4.0
 
 - Génération de click tracks programmables par segments : BPM, signature rythmique et nombre de mesures.
 - Menu de ligne `☰` au bout de chaque rangée.
@@ -207,6 +207,10 @@ Si une commande est introuvable, il faut ajouter le dossier contenant l’exécu
 - Option **Accords selon une subdivision rythmique**, avec génération automatique du nombre de cases nécessaire pour toute la ligne.
 - Subdivisions disponibles : blanche, blanche pointée, noire, noire pointée, croche, triolet de rondes, triolet de blanches, triolet de noires et triolet de croches.
 - Une virgule `,` prolonge l’accord précédent sans le rejouer; une case vide crée un silence.
+- Chaque champ d’accord possède un petit bouton **A** ouvrant ses réglages d’arpégiateur.
+- L’arpégiateur peut être activé ou désactivé indépendamment pour chaque accord.
+- Motifs disponibles : descendre puis remonter, monter puis redescendre et notes au hasard.
+- Choix de 1 à 8 octaves, des valeurs ronde à double croche, des valeurs pointées et des N-olets configurables par un nombre de 3 à 32.
 - Saisie d’accords sous forme de symboles musicaux standard basés sur les notes A, B, C, D, E, F, G.
 - Conversion automatique des symboles d’accords en notes LilyPond.
 - Interprétation générique de la notation `addX`, par exemple `Dadd11`, `Cmadd9`, `C7add13`, `Fadd#11` ou `Bbaddb9`.
@@ -265,7 +269,50 @@ Exemple de sauvegarde `.gen` :
   "chord_mode": "grid",
   "chord_grid_unit": "quarter",
   "grid_chords": ["C", ",", "G", null],
+  "grid_arpeggiators": [
+    {"enabled": true, "pattern": "up_down", "octaves": 2, "rhythm": "eighth", "dotted": false, "tuplet_count": 0},
+    {"enabled": false, "pattern": "up_down", "octaves": 1, "rhythm": "eighth", "dotted": false, "tuplet_count": 0},
+    {"enabled": true, "pattern": "random", "octaves": 1, "rhythm": "sixteenth", "dotted": false, "tuplet_count": 5},
+    {"enabled": false, "pattern": "up_down", "octaves": 1, "rhythm": "eighth", "dotted": false, "tuplet_count": 0}
+  ],
   "chord_instrument": "piano"
+}
+```
+
+### Arpégiateur par accord
+
+Chaque zone de saisie d’accord possède un bouton **A** placé sous le champ. Le bouton affiche `A✓` lorsque l’arpégiateur de cette case est activé. Les réglages sont propres à la case : un accord par ligne possède un réglage, le mode par mesure en possède un par mesure et la grille rythmique en possède un par case.
+
+Réglages disponibles :
+
+- **Activer l’arpégiateur** : désactivé, l’accord est joué normalement; activé, les notes sont jouées séparément.
+- **Mouvement** : descendre puis remonter, monter puis redescendre ou notes au hasard.
+- **Octaves** : de 1 à 8 octaves.
+- **Valeur de note** : double croche, croche, noire, blanche ou ronde.
+- **Valeur pointée** : applique le point à la valeur choisie.
+- **N-olet** : `0` désactive cette fonction; `3`, `4`, `5`, etc. génèrent respectivement des rapports `3:2`, `4:3`, `5:4`, etc.
+
+Le motif aléatoire est reproductible : la même sauvegarde génère la même séquence. Dans la grille rythmique, une virgule prolonge l’accord précédent avec son arpégiateur sans provoquer une nouvelle attaque. La dernière note est raccourcie automatiquement lorsque la durée disponible ne contient pas un nombre entier de pas d’arpège.
+
+Exemple de sauvegarde `.gen` pour un accord par ligne :
+
+```json
+{
+  "bpm": 120,
+  "numerator": 4,
+  "denominator": 4,
+  "measures": 2,
+  "chord_mode": "line",
+  "chord_symbol": "Cmaj7",
+  "chord_instrument": "piano",
+  "arpeggiator": {
+    "enabled": true,
+    "pattern": "up_down",
+    "octaves": 2,
+    "rhythm": "eighth",
+    "dotted": false,
+    "tuplet_count": 3
+  }
 }
 ```
 

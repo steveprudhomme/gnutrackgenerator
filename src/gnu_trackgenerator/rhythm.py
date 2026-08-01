@@ -12,6 +12,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from fractions import Fraction
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .arpeggiator import ArpeggiatorSettings
 
 RHYTHM_HALF = "half"
 RHYTHM_DOTTED_HALF = "dotted_half"
@@ -65,6 +69,7 @@ class ChordTimelineEvent:
 
     symbol: str | None
     duration: Fraction
+    arpeggiator: "ArpeggiatorSettings | None" = None
 
 
 @dataclass(frozen=True)
@@ -76,6 +81,7 @@ class ChordTimelineChunk:
     show_label: bool
     continues_after: bool
     ends_measure: bool
+    arpeggiator: "ArpeggiatorSettings | None" = None
 
 
 def line_duration(numerator: int, denominator: int, measures: int) -> Fraction:
@@ -123,6 +129,7 @@ def chord_grid_durations(
 def resolve_grid_events(
     values: tuple[str | None, ...],
     durations: tuple[Fraction, ...],
+    arpeggiators: tuple["ArpeggiatorSettings", ...] | None = None,
 ) -> tuple[ChordTimelineEvent, ...]:
     """Resolve chord cells into attacks, silences, and comma continuations.
 
@@ -131,12 +138,15 @@ def resolve_grid_events(
     """
     if len(values) != len(durations):
         raise ValueError("Le nombre de valeurs doit correspondre au nombre de cases rythmiques.")
+    if arpeggiators is not None and len(arpeggiators) != len(values):
+        raise ValueError("Le nombre de réglages d'arpégiateur doit correspondre au nombre de cases rythmiques.")
 
     events: list[ChordTimelineEvent] = []
     active_symbol: str | None = None
 
     for index, (raw_value, duration) in enumerate(zip(values, durations), start=1):
         value = raw_value.strip() if raw_value else None
+        arpeggiator = arpeggiators[index - 1] if arpeggiators is not None else None
 
         if value == ",":
             if active_symbol is None or not events or events[-1].symbol is None:
@@ -147,6 +157,7 @@ def resolve_grid_events(
             events[-1] = ChordTimelineEvent(
                 symbol=previous.symbol,
                 duration=previous.duration + duration,
+                arpeggiator=previous.arpeggiator,
             )
             continue
 
@@ -154,13 +165,13 @@ def resolve_grid_events(
             active_symbol = None
             if events and events[-1].symbol is None:
                 previous = events[-1]
-                events[-1] = ChordTimelineEvent(None, previous.duration + duration)
+                events[-1] = ChordTimelineEvent(None, previous.duration + duration, None)
             else:
-                events.append(ChordTimelineEvent(None, duration))
+                events.append(ChordTimelineEvent(None, duration, None))
             continue
 
         active_symbol = value
-        events.append(ChordTimelineEvent(value, duration))
+        events.append(ChordTimelineEvent(value, duration, arpeggiator))
 
     return tuple(events)
 
@@ -191,6 +202,7 @@ def split_events_at_measure_boundaries(
                     show_label=first_chunk and event.symbol is not None,
                     continues_after=remaining_after > 0,
                     ends_measure=ends_measure,
+                    arpeggiator=event.arpeggiator,
                 )
             )
             remaining = remaining_after

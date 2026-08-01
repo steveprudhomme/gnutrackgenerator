@@ -15,6 +15,14 @@ except ImportError as exc:  # Friendly failure when launched without dependency.
         "CustomTkinter n'est pas installé. Exécutez: pip install -r requirements.txt"
     ) from exc
 
+from .arpeggiator import (
+    ARP_PATTERN_LABELS,
+    ARP_PATTERN_LABEL_TO_VALUE,
+    ARP_RHYTHM_LABELS,
+    ARP_RHYTHM_LABEL_TO_VALUE,
+    ArpeggiatorError,
+    ArpeggiatorSettings,
+)
 from .chords import ChordParseError, SUPPORTED_CHORD_EXAMPLES, chord_symbol_to_lilypond_chord
 from .generator import GenerationError, generate_project
 from .models import (
@@ -52,6 +60,124 @@ INSTRUMENT_LABEL_TO_VALUE = {
 INSTRUMENT_VALUE_TO_LABEL = {value: label for label, value in INSTRUMENT_LABEL_TO_VALUE.items()}
 
 
+def _arpeggiator_button_text(settings: ArpeggiatorSettings) -> str:
+    """Return a compact visual state for a chord-field arpeggiator button."""
+    return "A✓" if settings.enabled else "A"
+
+
+class ArpeggiatorDialog(ctk.CTkToplevel):
+    """Modal editor for one chord field's arpeggiator settings."""
+
+    def __init__(self, master, settings: ArpeggiatorSettings, on_save) -> None:
+        super().__init__(master)
+        self.title("Réglages de l’arpégiateur")
+        self.geometry("520x500")
+        self.resizable(False, False)
+        self.transient(master.winfo_toplevel())
+        self.grab_set()
+        self.on_save = on_save
+
+        self.enabled_var = ctk.BooleanVar(value=settings.enabled)
+        self.pattern_var = ctk.StringVar(
+            value=ARP_PATTERN_LABELS.get(settings.pattern, next(iter(ARP_PATTERN_LABELS.values())))
+        )
+        self.octaves_var = ctk.StringVar(value=str(settings.octaves))
+        self.rhythm_var = ctk.StringVar(
+            value=ARP_RHYTHM_LABELS.get(settings.rhythm, next(iter(ARP_RHYTHM_LABELS.values())))
+        )
+        self.dotted_var = ctk.BooleanVar(value=settings.dotted)
+        self.tuplet_var = ctk.StringVar(value=str(settings.normalized_tuplet_count))
+
+        self.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            self,
+            text="Arpégiateur de l’accord",
+            font=ctk.CTkFont(size=20, weight="bold"),
+        ).grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 12), sticky="w")
+
+        ctk.CTkSwitch(
+            self,
+            text="Activer l’arpégiateur (désactivé = accord joué normalement)",
+            variable=self.enabled_var,
+        ).grid(row=1, column=0, columnspan=2, padx=20, pady=10, sticky="w")
+
+        ctk.CTkLabel(self, text="Mouvement").grid(row=2, column=0, padx=20, pady=8, sticky="w")
+        ctk.CTkOptionMenu(
+            self, variable=self.pattern_var, values=list(ARP_PATTERN_LABEL_TO_VALUE.keys())
+        ).grid(row=2, column=1, padx=20, pady=8, sticky="ew")
+
+        ctk.CTkLabel(self, text="Nombre d’octaves").grid(
+            row=3, column=0, padx=20, pady=8, sticky="w"
+        )
+        ctk.CTkEntry(self, textvariable=self.octaves_var, width=100).grid(
+            row=3, column=1, padx=20, pady=8, sticky="w"
+        )
+
+        ctk.CTkLabel(self, text="Valeur de note").grid(
+            row=4, column=0, padx=20, pady=8, sticky="w"
+        )
+        ctk.CTkOptionMenu(
+            self, variable=self.rhythm_var, values=list(ARP_RHYTHM_LABEL_TO_VALUE.keys())
+        ).grid(row=4, column=1, padx=20, pady=8, sticky="ew")
+
+        ctk.CTkSwitch(
+            self, text="Valeur pointée", variable=self.dotted_var
+        ).grid(row=5, column=0, columnspan=2, padx=20, pady=8, sticky="w")
+
+        ctk.CTkLabel(self, text="N-olet").grid(
+            row=6, column=0, padx=20, pady=8, sticky="w"
+        )
+        ctk.CTkEntry(
+            self,
+            textvariable=self.tuplet_var,
+            width=100,
+            placeholder_text="0, 3, 4, 5…",
+        ).grid(row=6, column=1, padx=20, pady=8, sticky="w")
+
+        ctk.CTkLabel(
+            self,
+            text=(
+                "N-olet : 0 désactive le N-olet. Un nombre N ≥ 3 produit N notes "
+                "dans le temps de N−1 notes (3:2, 4:3, 5:4, etc.). "
+                "Le motif aléatoire reste reproductible lors d’une nouvelle génération."
+            ),
+            wraplength=470,
+            justify="left",
+            font=ctk.CTkFont(size=12),
+        ).grid(row=7, column=0, columnspan=2, padx=20, pady=(8, 18), sticky="w")
+
+        actions = ctk.CTkFrame(self, fg_color="transparent")
+        actions.grid(row=8, column=0, columnspan=2, padx=20, pady=(4, 20), sticky="ew")
+        actions.grid_columnconfigure(0, weight=1)
+        actions.grid_columnconfigure(1, weight=1)
+        ctk.CTkButton(actions, text="Annuler", command=self.destroy).grid(
+            row=0, column=0, padx=(0, 6), sticky="ew"
+        )
+        ctk.CTkButton(actions, text="Enregistrer", command=self._save).grid(
+            row=0, column=1, padx=(6, 0), sticky="ew"
+        )
+
+        self.protocol("WM_DELETE_WINDOW", self.destroy)
+        self.after(50, self.focus_force)
+
+    def _save(self) -> None:
+        try:
+            settings = ArpeggiatorSettings(
+                enabled=bool(self.enabled_var.get()),
+                pattern=ARP_PATTERN_LABEL_TO_VALUE[self.pattern_var.get()],
+                octaves=int(self.octaves_var.get()),
+                rhythm=ARP_RHYTHM_LABEL_TO_VALUE[self.rhythm_var.get()],
+                dotted=bool(self.dotted_var.get()),
+                tuplet_count=int(self.tuplet_var.get() or "0"),
+            )
+            settings.validate()
+        except (KeyError, ValueError, ArpeggiatorError) as exc:
+            messagebox.showerror("Arpégiateur", str(exc), parent=self)
+            return
+        self.on_save(settings)
+        self.destroy()
+
+
 class SegmentRow(ctk.CTkFrame):
     """One editable musical segment row in the scrollable list."""
 
@@ -73,6 +199,9 @@ class SegmentRow(ctk.CTkFrame):
         self.grid_chord_visible = False
         self.measure_chord_vars: list[ctk.StringVar] = []
         self.grid_chord_vars: list[ctk.StringVar] = []
+        self.line_arpeggiator = ArpeggiatorSettings()
+        self.measure_arpeggiators: list[ArpeggiatorSettings] = []
+        self.grid_arpeggiators: list[ArpeggiatorSettings] = []
 
         segment = defaults or Segment(bpm=120, numerator=4, denominator=4, measures=4)
         self.bpm_var = ctk.StringVar(value=str(segment.bpm))
@@ -87,6 +216,9 @@ class SegmentRow(ctk.CTkFrame):
             value=RHYTHM_UNIT_LABELS.get(segment.chord_grid_unit, RHYTHM_UNIT_LABELS[RHYTHM_QUARTER])
         )
         self.grid_status_var = ctk.StringVar(value="")
+        self.line_arpeggiator = segment.chord_arpeggiator
+        self.measure_arpeggiators = list(segment.effective_measure_arpeggiators)
+        self.grid_arpeggiators = list(segment.effective_grid_arpeggiators) if segment.effective_chord_mode == CHORD_MODE_GRID else []
 
         mode = segment.effective_chord_mode
         if mode == CHORD_MODE_GRID:
@@ -193,6 +325,13 @@ class SegmentRow(ctk.CTkFrame):
             textvariable=self.chord_symbol_var,
             placeholder_text="Ex.: C, Cm7, Dadd11, G#m7(b13)",
         ).grid(row=0, column=1, padx=6, pady=(8, 4), sticky="ew")
+        self.line_arpeggiator_button = ctk.CTkButton(
+            self.line_chord_frame,
+            text=_arpeggiator_button_text(self.line_arpeggiator),
+            width=38,
+            command=self._edit_line_arpeggiator,
+        )
+        self.line_arpeggiator_button.grid(row=1, column=1, padx=6, pady=(0, 4), sticky="w")
         ctk.CTkLabel(self.line_chord_frame, text="Instrument").grid(
             row=0, column=2, padx=(10, 6), pady=(8, 4)
         )
@@ -210,7 +349,7 @@ class SegmentRow(ctk.CTkFrame):
             self.line_chord_frame,
             text=f"Saisir un symbole d’accord A–G. Exemples : {examples}",
             font=ctk.CTkFont(size=11),
-        ).grid(row=1, column=0, columnspan=5, padx=10, pady=(0, 8), sticky="w")
+        ).grid(row=2, column=0, columnspan=5, padx=10, pady=(0, 8), sticky="w")
 
     def _build_measure_chord_frame(self) -> None:
         self.measure_chord_frame = ctk.CTkFrame(self)
@@ -301,12 +440,39 @@ class SegmentRow(ctk.CTkFrame):
             self.grid_chord_frame,
             text=(
                 "Saisir un accord pour le jouer, une virgule (,) pour prolonger l’accord précédent "
-                "sans nouvelle attaque, ou laisser vide pour produire un silence."
+                "sans nouvelle attaque (et avec le même arpégiateur), ou laisser vide pour produire un silence. "
+                "Le bouton A sous chaque accord ouvre ses réglages d’arpégiateur."
             ),
             font=ctk.CTkFont(size=11),
             wraplength=920,
             justify="left",
         ).grid(row=3, column=0, columnspan=6, padx=10, pady=(0, 8), sticky="w")
+
+
+    def _edit_line_arpeggiator(self) -> None:
+        def save(settings: ArpeggiatorSettings) -> None:
+            self.line_arpeggiator = settings
+            self.line_arpeggiator_button.configure(text=_arpeggiator_button_text(settings))
+
+        ArpeggiatorDialog(self, self.line_arpeggiator, save)
+
+    def _edit_measure_arpeggiator(self, index: int, button) -> None:
+        self._ensure_measure_arpeggiators(index + 1)
+
+        def save(settings: ArpeggiatorSettings) -> None:
+            self.measure_arpeggiators[index] = settings
+            button.configure(text=_arpeggiator_button_text(settings))
+
+        ArpeggiatorDialog(self, self.measure_arpeggiators[index], save)
+
+    def _edit_grid_arpeggiator(self, index: int, button) -> None:
+        self._ensure_grid_arpeggiators(index + 1)
+
+        def save(settings: ArpeggiatorSettings) -> None:
+            self.grid_arpeggiators[index] = settings
+            button.configure(text=_arpeggiator_button_text(settings))
+
+        ArpeggiatorDialog(self, self.grid_arpeggiators[index], save)
 
     def toggle_menu(self) -> None:
         if self.menu_visible:
@@ -378,11 +544,16 @@ class SegmentRow(ctk.CTkFrame):
         while len(self.measure_chord_vars) < count:
             self.measure_chord_vars.append(ctk.StringVar(value=""))
 
+    def _ensure_measure_arpeggiators(self, count: int) -> None:
+        while len(self.measure_arpeggiators) < count:
+            self.measure_arpeggiators.append(ArpeggiatorSettings())
+
     def _rebuild_measure_chord_inputs(self) -> None:
         count = self._measure_count()
         if count is None:
             return
         self._ensure_measure_chord_vars(count)
+        self._ensure_measure_arpeggiators(count)
         for widget in self.measure_chord_entries_frame.winfo_children():
             widget.destroy()
         for index in range(count):
@@ -398,6 +569,15 @@ class SegmentRow(ctk.CTkFrame):
                 textvariable=self.measure_chord_vars[index],
                 placeholder_text="Ex.: C, Am7, F#",
             ).grid(row=1, column=0, padx=6, pady=(1, 6), sticky="ew")
+            arp_button = ctk.CTkButton(
+                cell,
+                text=_arpeggiator_button_text(self.measure_arpeggiators[index]),
+                width=34,
+            )
+            arp_button.configure(
+                command=lambda idx=index, btn=arp_button: self._edit_measure_arpeggiator(idx, btn)
+            )
+            arp_button.grid(row=2, column=0, padx=6, pady=(0, 6), sticky="w")
 
     def _grid_values(self):
         try:
@@ -417,6 +597,10 @@ class SegmentRow(ctk.CTkFrame):
         while len(self.grid_chord_vars) < count:
             self.grid_chord_vars.append(ctk.StringVar(value=""))
 
+    def _ensure_grid_arpeggiators(self, count: int) -> None:
+        while len(self.grid_arpeggiators) < count:
+            self.grid_arpeggiators.append(ArpeggiatorSettings())
+
     def _rebuild_grid_chord_inputs(self) -> None:
         for widget in self.grid_chord_entries_frame.winfo_children():
             widget.destroy()
@@ -426,6 +610,7 @@ class SegmentRow(ctk.CTkFrame):
             return
         numerator, denominator, _measures, unit, durations = values
         self._ensure_grid_chord_vars(len(durations))
+        self._ensure_grid_arpeggiators(len(durations))
         nominal = RHYTHM_UNIT_DURATIONS[unit]
         one_measure = measure_duration(numerator, denominator)
         elapsed = 0
@@ -447,6 +632,15 @@ class SegmentRow(ctk.CTkFrame):
                 placeholder_text="C / , / vide",
                 width=110,
             ).grid(row=1, column=0, padx=5, pady=(1, 5), sticky="ew")
+            arp_button = ctk.CTkButton(
+                cell,
+                text=_arpeggiator_button_text(self.grid_arpeggiators[index]),
+                width=34,
+            )
+            arp_button.configure(
+                command=lambda idx=index, btn=arp_button: self._edit_grid_arpeggiator(idx, btn)
+            )
+            arp_button.grid(row=2, column=0, padx=5, pady=(0, 5), sticky="w")
             elapsed += duration
         self.grid_status_var.set(
             f"{len(durations)} case(s) · subdivision {RHYTHM_UNIT_LABELS[unit]} · "
@@ -468,6 +662,9 @@ class SegmentRow(ctk.CTkFrame):
         chord_symbol: str | None = None
         measure_chords: tuple[str | None, ...] = ()
         grid_chords: tuple[str | None, ...] = ()
+        chord_arpeggiator = ArpeggiatorSettings()
+        measure_arpeggiators: tuple[ArpeggiatorSettings, ...] = ()
+        grid_arpeggiators: tuple[ArpeggiatorSettings, ...] = ()
         chord_instrument = INSTRUMENT_LABEL_TO_VALUE.get(
             self.chord_instrument_var.get(), CHORD_INSTRUMENT_PIANO
         )
@@ -485,6 +682,7 @@ class SegmentRow(ctk.CTkFrame):
                 chord_symbol = self.chord_symbol_var.get().strip() or None
                 if chord_symbol:
                     chord_symbol_to_lilypond_chord(chord_symbol)
+                chord_arpeggiator = self.line_arpeggiator
 
             elif self.chord_mode == CHORD_MODE_MEASURE:
                 if measures > 0:
@@ -499,6 +697,8 @@ class SegmentRow(ctk.CTkFrame):
                             raise ValidationError(f"Mesure {measure_index + 1}: {exc}") from exc
                     normalized.append(symbol)
                 measure_chords = tuple(normalized)
+                self._ensure_measure_arpeggiators(max(measures, 0))
+                measure_arpeggiators = tuple(self.measure_arpeggiators[:max(measures, 0)])
 
             elif self.chord_mode == CHORD_MODE_GRID:
                 durations = chord_grid_durations(
@@ -515,6 +715,8 @@ class SegmentRow(ctk.CTkFrame):
                             raise ValidationError(f"Case {cell_index + 1}: {exc}") from exc
                     normalized_grid.append(value)
                 grid_chords = tuple(normalized_grid)
+                self._ensure_grid_arpeggiators(len(durations))
+                grid_arpeggiators = tuple(self.grid_arpeggiators[:len(durations)])
 
             segment = Segment(
                 bpm=bpm,
@@ -527,8 +729,11 @@ class SegmentRow(ctk.CTkFrame):
                 measure_chords=measure_chords,
                 chord_grid_unit=chord_grid_unit,
                 grid_chords=grid_chords,
+                chord_arpeggiator=chord_arpeggiator,
+                measure_arpeggiators=measure_arpeggiators,
+                grid_arpeggiators=grid_arpeggiators,
             )
-        except ChordParseError as exc:
+        except (ChordParseError, ArpeggiatorError) as exc:
             raise ValidationError(str(exc)) from exc
         except ValueError as exc:
             raise ValidationError("Tous les champs numériques doivent contenir des entiers.") from exc

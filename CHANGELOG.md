@@ -30,6 +30,31 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 
 - Rien pour le moment.
 
+## [0.4.0] - 2026-08-01
+
+### Ajouté
+
+- Bouton **A** sous chaque champ d’accord des modes par ligne, par mesure et grille rythmique.
+- Fenêtre de configuration propre à chaque accord avec activation indépendante.
+- Motifs d’arpège montant-descendant, descendant-montant et aléatoire reproductible.
+- Choix de 1 à 8 octaves.
+- Valeurs rythmiques : double croche, croche, noire, blanche et ronde, avec option pointée.
+- N-olets génériques configurables de 3 à 32, selon la convention N notes dans le temps de N−1.
+- Module `arpeggiator.py` et sérialisation `.gen` des réglages par accord.
+- Tests unitaires pour les motifs, durées, N-olets, sauvegardes et sortie LilyPond.
+
+### Changé
+
+- La portée harmonique peut maintenant contenir de véritables notes arpégées plutôt qu’un accord vertical.
+- Les N-olets sont produits avec la syntaxe LilyPond `\tuplet N/(N-1)`.
+- Une virgule dans la grille conserve les réglages d’arpégiateur de l’accord prolongé.
+- Passage de la version du projet à `0.4.0`.
+
+### Corrigé
+
+- La durée de la dernière note d’un arpège est ajustée afin de terminer exactement à la fin de l’accord.
+- Les anciens fichiers `.gen` sans réglages d’arpégiateur restent compatibles et utilisent des réglages désactivés par défaut.
+
 ## [0.3.0] - 2026-08-01
 
 ### Ajouté

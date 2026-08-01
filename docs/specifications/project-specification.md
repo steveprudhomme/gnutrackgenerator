@@ -2,7 +2,7 @@
 
 ## Objectif
 
-GNU TrackGenerator génère des pistes de métronome programmables et reproductibles à partir de segments musicaux. Chaque segment définit un tempo, une signature rythmique, un nombre de mesures et, optionnellement, soit un accord répété sur toute la ligne, soit un accord indépendant pour chaque mesure, soit une grille d’accords fondée sur une subdivision rythmique.
+GNU TrackGenerator génère des pistes de métronome programmables et reproductibles à partir de segments musicaux. Chaque segment définit un tempo, une signature rythmique, un nombre de mesures et, optionnellement, soit un accord répété sur toute la ligne, soit un accord indépendant pour chaque mesure, soit une grille d’accords fondée sur une subdivision rythmique. Chaque champ d’accord peut aussi posséder son propre arpégiateur.
 
 ## Hors périmètre actuel
 
@@ -36,6 +36,14 @@ GNU TrackGenerator génère des pistes de métronome programmables et reproducti
 - `REQ-021` — Une virgule prolonge l’accord précédent sans nouvelle attaque.
 - `REQ-022` — Une case vide représente un silence.
 - `REQ-023` — Une prolongation traversant une barre de mesure est liée dans la sortie LilyPond.
+- `REQ-024` — Chaque champ d’accord possède un bouton **A** ouvrant ses réglages d’arpégiateur.
+- `REQ-025` — L’arpégiateur peut être activé ou désactivé sans désactiver l’accord.
+- `REQ-026` — Les motifs disponibles sont descendant-montant, montant-descendant et aléatoire.
+- `REQ-027` — L’utilisateur peut choisir de 1 à 8 octaves.
+- `REQ-028` — Les valeurs disponibles sont double croche, croche, noire, blanche et ronde, avec une option pointée.
+- `REQ-029` — Un N-olet est saisi par un nombre N de 3 à 32 et signifie N notes dans le temps de N−1.
+- `REQ-030` — Le motif aléatoire est reproductible pour une même sauvegarde.
+- `REQ-031` — Une virgule de continuation conserve l’arpégiateur de l’accord précédent.
 
 ## Accords supportés
 
@@ -92,7 +100,7 @@ Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, 
 ```json
 {
   "app": "GNU TrackGenerator",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "soundfont_path": null,
   "segments": [
     {
@@ -102,6 +110,12 @@ Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, 
       "measures": 4,
       "chord_mode": "measure",
       "measure_chords": ["C", "Am7", "F", "G7"],
+      "measure_arpeggiators": [
+        {"enabled": true, "pattern": "up_down", "octaves": 2, "rhythm": "eighth", "dotted": false, "tuplet_count": 3},
+        {"enabled": false, "pattern": "up_down", "octaves": 1, "rhythm": "eighth", "dotted": false, "tuplet_count": 0},
+        {"enabled": true, "pattern": "down_up", "octaves": 1, "rhythm": "sixteenth", "dotted": false, "tuplet_count": 0},
+        {"enabled": true, "pattern": "random", "octaves": 2, "rhythm": "quarter", "dotted": true, "tuplet_count": 5}
+      ],
       "chord_instrument": "acoustic_guitar"
     }
   ]
@@ -121,6 +135,12 @@ Exemple du mode rythmique :
   "chord_mode": "grid",
   "chord_grid_unit": "quarter",
   "grid_chords": ["C", ",", "G", null],
+  "grid_arpeggiators": [
+    {"enabled": true, "pattern": "up_down", "octaves": 2, "rhythm": "eighth", "dotted": false, "tuplet_count": 0},
+    {"enabled": false, "pattern": "up_down", "octaves": 1, "rhythm": "eighth", "dotted": false, "tuplet_count": 0},
+    {"enabled": true, "pattern": "random", "octaves": 1, "rhythm": "sixteenth", "dotted": false, "tuplet_count": 5},
+    {"enabled": false, "pattern": "up_down", "octaves": 1, "rhythm": "eighth", "dotted": false, "tuplet_count": 0}
+  ],
   "chord_instrument": "piano"
 }
 ```
@@ -136,6 +156,9 @@ Exemple du mode rythmique :
 - La conversion MIDI vers WAV tente TiMidity avant FluidSynth.
 - Quatre mesures en `4/4` divisées en noires produisent 16 cases.
 - La séquence `["C", ",", "G", null]` produit un accord C prolongé sur une blanche, un accord G sur une noire et un silence sur une noire.
+- Un arpégiateur de croches en `4/4` génère huit attaques par mesure.
+- Un triolet de croches génère douze attaques par mesure avec `\tuplet 3/2`.
+- Une configuration absente dans un ancien fichier `.gen` est chargée comme arpégiateur désactivé.
 
 
 ## Affichage PDF des accords
