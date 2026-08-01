@@ -201,7 +201,7 @@ def _write_timidity_soundfont_config(
     return cfg_path
 
 
-def _segment_measure_pattern(segment: Segment) -> str:
+def _segment_measure_pattern(segment: Segment, chord_symbol: str | None = None) -> str:
     """Build one measure of click-track drum notes for a segment.
 
     Rule required by the specification:
@@ -213,7 +213,7 @@ def _segment_measure_pattern(segment: Segment) -> str:
     available in LilyPond's predefined guitar-fretboard table.
     """
     duration = str(segment.denominator)
-    notes = [f"bd{duration}{_chord_symbol_markup(segment)}"]
+    notes = [f"bd{duration}{_chord_symbol_markup(chord_symbol)}"]
     notes.extend(f"sn{duration}" for _ in range(segment.numerator - 1))
     return " ".join(notes)
 
@@ -228,24 +228,31 @@ def _lilypond_string_literal(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
-def _chord_symbol_markup(segment: Segment) -> str:
+def _chord_symbol_markup(chord_symbol: str | None) -> str:
     """Return the exact chord symbol markup printed above the click staff."""
-    if not segment.chord_symbol:
+    if not chord_symbol:
         return ""
-    symbol = _lilypond_string_literal(segment.chord_symbol.strip())
+    symbol = _lilypond_string_literal(chord_symbol.strip())
     return f'^\\markup {{ \\bold "{symbol}" }}'
 
 
-def _segment_chord_measure_pattern(segment: Segment, segment_index: int) -> str:
+def _segment_chord_measure_pattern(
+    segment: Segment,
+    segment_index: int,
+    chord_symbol: str | None,
+    measure_index: int,
+) -> str:
     """Build one chord measure for the optional harmony staff."""
     duration = _measure_duration_multiplier(segment)
-    if not segment.chord_symbol:
+    if not chord_symbol:
         return f"r{duration}"
 
     try:
-        chord = chord_symbol_to_lilypond_chord(segment.chord_symbol)
+        chord = chord_symbol_to_lilypond_chord(chord_symbol)
     except ChordParseError as exc:
-        raise GenerationError(f"Accord invalide à la rangée {segment_index}: {exc}") from exc
+        raise GenerationError(
+            f"Accord invalide à la rangée {segment_index}, mesure {measure_index}: {exc}"
+        ) from exc
 
     # Guitar chords are rendered as strummed/arpeggiated chords. LilyPond's
     # \arpeggio produces a visual strum marker and a more idiomatic guitar score.
@@ -258,7 +265,6 @@ def _build_click_music(project: ProjectData) -> str:
     """Build the DrumStaff music body."""
     music_lines: list[str] = []
     for index, segment in enumerate(project.segments, start=1):
-        pattern = _segment_measure_pattern(segment)
         music_lines.extend(
             [
                 f"  % Segment {index}: {segment.numerator}/{segment.denominator}, "
@@ -267,10 +273,19 @@ def _build_click_music(project: ProjectData) -> str:
                 # BPM is interpreted on the denominator beat unit.
                 # Example: 7/8 at 120 => eighth-note = 120.
                 f"  \\tempo {segment.denominator} = {segment.bpm}",
-                f"  \\repeat unfold {segment.measures} {{ {pattern} | }}",
-                "",
             ]
         )
+
+        symbols = segment.chord_symbols_by_measure
+        if len(set(symbols)) == 1:
+            pattern = _segment_measure_pattern(segment, symbols[0])
+            music_lines.append(f"  \\repeat unfold {segment.measures} {{ {pattern} | }}")
+        else:
+            for measure_index, symbol in enumerate(symbols, start=1):
+                pattern = _segment_measure_pattern(segment, symbol)
+                music_lines.append(f"  % Mesure {measure_index}: {symbol or 'sans accord'}")
+                music_lines.append(f"  {pattern} |")
+        music_lines.append("")
     return "\n".join(music_lines).rstrip()
 
 
@@ -283,11 +298,11 @@ def _build_chord_music(project: ProjectData) -> str:
         instrument = segment.chord_instrument
         midi_instrument = LILYPOND_MIDI_INSTRUMENTS.get(instrument, "acoustic grand")
         instrument_name = LILYPOND_INSTRUMENT_NAMES.get(instrument, "Accords")
-        pattern = _segment_chord_measure_pattern(segment, index)
+        symbols = segment.chord_symbols_by_measure
 
         music_lines.extend(
             [
-                f"  % Accords segment {index}: {segment.chord_symbol or 'silence'}",
+                f"  % Accords segment {index}",
                 f"  \\time {segment.numerator}/{segment.denominator}",
                 f"  \\tempo {segment.denominator} = {segment.bpm}",
             ]
@@ -304,26 +319,38 @@ def _build_chord_music(project: ProjectData) -> str:
         if segment.chord_instrument == CHORD_INSTRUMENT_ACOUSTIC_GUITAR:
             music_lines.append("  \\arpeggioArrowUp")
 
-        music_lines.extend(
-            [
-                f"  \\repeat unfold {segment.measures} {{ {pattern} | }}",
-                "",
-            ]
-        )
+        if len(set(symbols)) == 1:
+            pattern = _segment_chord_measure_pattern(segment, index, symbols[0], 1)
+            music_lines.append(f"  \\repeat unfold {segment.measures} {{ {pattern} | }}")
+        else:
+            for measure_index, symbol in enumerate(symbols, start=1):
+                pattern = _segment_chord_measure_pattern(
+                    segment, index, symbol, measure_index
+                )
+                music_lines.append(f"  % Mesure {measure_index}: {symbol or 'silence'}")
+                music_lines.append(f"  {pattern} |")
+        music_lines.append("")
 
     return "\n".join(music_lines).rstrip()
 
 
-def _segment_fretboard_measure_pattern(segment: Segment, segment_index: int) -> str:
+def _segment_fretboard_measure_pattern(
+    segment: Segment,
+    segment_index: int,
+    chord_symbol: str | None,
+    measure_index: int,
+) -> str:
     """Build one measure for the optional guitar fretboard diagram track."""
     duration = _measure_duration_multiplier(segment)
-    if segment.chord_instrument != CHORD_INSTRUMENT_ACOUSTIC_GUITAR or not segment.chord_symbol:
+    if segment.chord_instrument != CHORD_INSTRUMENT_ACOUSTIC_GUITAR or not chord_symbol:
         return f"s{duration}"
 
     try:
-        chordmode_token = chord_symbol_to_lilypond_fretboard_chord(segment.chord_symbol)
+        chordmode_token = chord_symbol_to_lilypond_fretboard_chord(chord_symbol)
     except ChordParseError as exc:
-        raise GenerationError(f"Accord invalide à la rangée {segment_index}: {exc}") from exc
+        raise GenerationError(
+            f"Accord invalide à la rangée {segment_index}, mesure {measure_index}: {exc}"
+        ) from exc
 
     if chordmode_token is None:
         # The exact text symbol still appears above the DrumStaff. We skip the
@@ -345,15 +372,24 @@ def _build_fretboard_music(project: ProjectData) -> str:
     """Build the optional FretBoards music body for acoustic-guitar chords."""
     music_lines: list[str] = []
     for index, segment in enumerate(project.segments, start=1):
-        pattern = _segment_fretboard_measure_pattern(segment, index)
+        symbols = segment.chord_symbols_by_measure
         music_lines.extend(
             [
-                f"  % Diagrammes guitare segment {index}: {segment.chord_symbol or 'aucun'}",
+                f"  % Diagrammes guitare segment {index}",
                 f"  \\time {segment.numerator}/{segment.denominator}",
-                f"  \\repeat unfold {segment.measures} {{ {pattern} | }}",
-                "",
             ]
         )
+        if len(set(symbols)) == 1:
+            pattern = _segment_fretboard_measure_pattern(segment, index, symbols[0], 1)
+            music_lines.append(f"  \\repeat unfold {segment.measures} {{ {pattern} | }}")
+        else:
+            for measure_index, symbol in enumerate(symbols, start=1):
+                pattern = _segment_fretboard_measure_pattern(
+                    segment, index, symbol, measure_index
+                )
+                music_lines.append(f"  % Mesure {measure_index}: {symbol or 'aucun'}")
+                music_lines.append(f"  {pattern} |")
+        music_lines.append("")
     return "\n".join(music_lines).rstrip()
 
 
@@ -362,9 +398,9 @@ def build_lilypond_source(project: ProjectData, title: str = APP_NAME) -> str:
     project.validate()
 
     click_music = _build_click_music(project)
-    has_chords = any(segment.chord_symbol for segment in project.segments)
+    has_chords = any(segment.has_any_chord for segment in project.segments)
     has_guitar_chords = any(
-        segment.chord_symbol and segment.chord_instrument == CHORD_INSTRUMENT_ACOUSTIC_GUITAR
+        segment.has_any_chord and segment.chord_instrument == CHORD_INSTRUMENT_ACOUSTIC_GUITAR
         for segment in project.segments
     )
     chord_music = _build_chord_music(project) if has_chords else ""

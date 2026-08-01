@@ -47,6 +47,15 @@ DEGREE_TO_SEMITONES: dict[str, int] = {
     "13": 21,
 }
 
+# Generic diatonic interval calculation used by the ``addX`` parser.  This
+# avoids maintaining a separate hard-coded entry for every possible extension.
+SIMPLE_MAJOR_SCALE_INTERVALS: tuple[int, ...] = (0, 2, 4, 5, 7, 9, 11)
+DEGREE_TOKEN_RE = re.compile(r"^(bb|##|b|#)?([1-9][0-9]*)$")
+ADD_QUALITY_RE = re.compile(
+    r"^(?P<base>.*?)(?:\()?add(?P<degree>(?:bb|##|b|#)?[1-9][0-9]*)(?:\))?$",
+    re.IGNORECASE,
+)
+
 # LilyPond's English note names.  The chosen spellings favor readability and
 # validity over perfect enharmonic spelling for every theoretical context.
 PITCH_CLASS_TO_LILYPOND: dict[int, str] = {
@@ -170,6 +179,10 @@ SUPPORTED_CHORD_EXAMPLES: tuple[str, ...] = (
     "Cadd2",
     "Cμ",
     "Cadd9",
+    "Dadd11",
+    "Fadd#11",
+    "Cmadd9",
+    "C7add13",
     "C6",
     "Cm6",
     "Cmaj7",
@@ -189,6 +202,69 @@ SUPPORTED_CHORD_EXAMPLES: tuple[str, ...] = (
 )
 
 
+def degree_to_semitones(degree: str) -> int:
+    """Convert a scale degree such as ``11`` or ``#13`` to semitones.
+
+    Compound degrees are calculated algorithmically from the major scale.  For
+    example, 11 is 17 semitones and 13 is 21 semitones above the root.  This is
+    the key that lets the parser understand new ``addX`` chords without adding
+    one hard-coded chord definition for every extension.
+    """
+    if degree in DEGREE_TO_SEMITONES:
+        return DEGREE_TO_SEMITONES[degree]
+
+    match = DEGREE_TOKEN_RE.fullmatch(degree)
+    if not match:
+        raise ChordParseError(
+            f"Degré ajouté invalide: '{degree}'. Utilisez par exemple add2, add9, add11, add#11 ou addb13."
+        )
+
+    accidental, number_text = match.groups()
+    number = int(number_text)
+    simple_index = (number - 1) % 7
+    octave_count = (number - 1) // 7
+    semitones = SIMPLE_MAJOR_SCALE_INTERVALS[simple_index] + 12 * octave_count
+    semitones += {None: 0, "b": -1, "bb": -2, "#": 1, "##": 2}[accidental]
+    return semitones
+
+
+def resolve_chord_quality(suffix: str) -> ChordQuality:
+    """Resolve an explicit quality or a generic ``addX`` construction.
+
+    Supported examples include ``add11``, ``madd9``, ``7add13``, ``add#11``
+    and parenthesized forms such as ``(add11)``.  The part before ``add`` is
+    resolved as an existing chord quality; when omitted, a major triad is used.
+    """
+    normalized = suffix.replace("♭", "b").replace("♯", "#")
+    if normalized in CHORD_QUALITIES:
+        return CHORD_QUALITIES[normalized]
+
+    match = ADD_QUALITY_RE.fullmatch(normalized)
+    if not match:
+        examples = ", ".join(SUPPORTED_CHORD_EXAMPLES[:12]) + ", ..."
+        raise ChordParseError(
+            f"Type d'accord non supporté: '{suffix or 'majeur'}'. Exemples: {examples}"
+        )
+
+    base_suffix = match.group("base")
+    degree = match.group("degree")
+    if base_suffix not in CHORD_QUALITIES:
+        raise ChordParseError(
+            f"Qualité de base non supportée avant add: '{base_suffix}'. "
+            "Exemples valides: Dadd11, Cmadd9, C7add13."
+        )
+
+    base_quality = CHORD_QUALITIES[base_suffix]
+    degrees = list(base_quality.degrees)
+    added_interval = degree_to_semitones(degree)
+    if all(degree_to_semitones(item) != added_interval for item in degrees):
+        degrees.append(degree)
+    degrees.sort(key=degree_to_semitones)
+
+    base_name = base_quality.name
+    return ChordQuality(f"{base_name} avec ajout {degree}", tuple(degrees))
+
+
 def normalize_chord_symbol(symbol: str) -> tuple[str, int, str, ChordQuality]:
     """Return normalized root, root pitch class, suffix and chord quality."""
     match = CHORD_SYMBOL_RE.match(symbol or "")
@@ -199,7 +275,12 @@ def normalize_chord_symbol(symbol: str) -> tuple[str, int, str, ChordQuality]:
 
     root_letter = match.group(1).upper()
     accidental = match.group(2)
-    suffix = match.group(3).replace(" ", "")
+    suffix = (
+        match.group(3)
+        .replace(" ", "")
+        .replace("♭", "b")
+        .replace("♯", "#")
+    )
 
     root_pc = ROOT_TO_PITCH_CLASS[root_letter]
     if accidental == "#":
@@ -208,14 +289,10 @@ def normalize_chord_symbol(symbol: str) -> tuple[str, int, str, ChordQuality]:
         root_pc -= 1
     root_pc %= 12
 
-    if suffix not in CHORD_QUALITIES:
-        examples = ", ".join(SUPPORTED_CHORD_EXAMPLES[:10]) + ", ..."
-        raise ChordParseError(
-            f"Type d'accord non supporté: '{suffix or 'majeur'}'. Exemples: {examples}"
-        )
+    quality = resolve_chord_quality(suffix)
 
     normalized_root = root_letter + accidental
-    return normalized_root, root_pc, suffix, CHORD_QUALITIES[suffix]
+    return normalized_root, root_pc, suffix, quality
 
 
 def _lilypond_note_from_total_semitones(total: int) -> str:
@@ -239,7 +316,7 @@ def chord_symbol_to_lilypond_notes(symbol: str) -> list[str]:
     _root, root_pc, _suffix, quality = normalize_chord_symbol(symbol)
     notes: list[str] = []
     for degree in quality.degrees:
-        interval = DEGREE_TO_SEMITONES[degree]
+        interval = degree_to_semitones(degree)
         notes.append(_lilypond_note_from_total_semitones(root_pc + interval))
     return notes
 

@@ -128,11 +128,25 @@ Chaque ligne musicale possède un bouton de menu `☰`. Pour ajouter un accord �
 
 1. Cliquer sur `☰` au bout de la ligne.
 2. Choisir **Accord → Accord au début de chaque ligne**.
-3. Saisir un symbole d’accord, par exemple `C`, `Cm`, `C7`, `F#maj7`, `Bb9` ou `C7#9`.
+3. Saisir un symbole d’accord, par exemple `C`, `Cm`, `C7`, `F#maj7`, `Bb9`, `C7#9` ou `Dadd11`.
 4. Choisir l’instrument : **Piano**, **Strings** ou **Guitare sèche**.
 5. Cliquer sur `⌃` pour masquer la zone de saisie, sans effacer l’accord.
 
 L’accord se répète à chaque mesure de la ligne. Sa durée est automatiquement adaptée à la signature rythmique de la ligne. Par exemple, une ligne en `7/8` génère un accord de durée `1*7/8` pour chaque mesure.
+
+La notation `addX` est comprise de manière générique. Il est possible d’utiliser notamment `Dadd11`, `Cmadd9`, `C7add13`, `Fadd#11`, `Bbaddb9` ou la forme parenthésée `D(add11)`. Le degré ajouté est calculé automatiquement à partir de la gamme majeure et combiné à la qualité de l’accord de base.
+
+Pour utiliser un accord différent à chaque mesure :
+
+1. Cliquer sur `☰` au bout de la ligne.
+2. Choisir **Accord → Accord au début de chaque mesure**.
+3. Remplir les cases `Mesure 1`, `Mesure 2`, etc.
+4. Choisir l’instrument commun à la ligne.
+5. Cliquer sur `⌃` pour masquer les cases sans effacer les accords.
+
+Le nombre de cases suit automatiquement le nombre de mesures indiqué dans la ligne. Chaque accord dure une mesure complète. Une case vide génère une mesure de silence sur la portée d’accords.
+
+Pour revenir à une ligne sans harmonie, ouvrir le menu `☰` et choisir **Accord → Désactiver les accords**.
 
 Dans le PDF, le symbole exact de l’accord est imprimé au-dessus de la partition, au début de chaque mesure concernée.
 

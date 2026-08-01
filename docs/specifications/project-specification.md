@@ -2,14 +2,13 @@
 
 ## Objectif
 
-GNU TrackGenerator génère des pistes de métronome programmables et reproductibles à partir de segments musicaux. Chaque segment définit un tempo, une signature rythmique, un nombre de mesures et, optionnellement, un accord harmonique répété à chaque mesure.
+GNU TrackGenerator génère des pistes de métronome programmables et reproductibles à partir de segments musicaux. Chaque segment définit un tempo, une signature rythmique, un nombre de mesures et, optionnellement, soit un accord répété sur toute la ligne, soit un accord indépendant pour chaque mesure.
 
 ## Hors périmètre actuel
 
 - Édition complète de partitions.
 - Station audionumérique intégrée.
 - Choix avancé de banques de sons par instrument.
-- Accords différents pour chaque mesure d’une même ligne, prévu pour une version ultérieure.
 - Support exhaustif de toutes les notations d’accords jazz, classiques ou régionales.
 
 ## Exigences fonctionnelles
@@ -26,8 +25,15 @@ GNU TrackGenerator génère des pistes de métronome programmables et reproducti
 - `REQ-010` — La durée de l’accord correspond à la longueur complète de la mesure, par exemple `1*7/8` pour une mesure en 7/8.
 - `REQ-011` — Le projet se sauvegarde dans un fichier `.gen` compatible JSON.
 - `REQ-012` — Le pipeline produit `.gen`, `.ly`, `.mid` et `.wav`.
+- `REQ-013` — Le menu de ligne permet d’activer **Accord au début de chaque mesure**.
+- `REQ-014` — Le nombre de cases d’accord correspond au nombre de mesures de la ligne.
+- `REQ-015` — Chaque accord par mesure peut être différent et dure une mesure complète.
+- `REQ-016` — Une case d’accord vide génère une mesure sans accord.
+- `REQ-017` — Une modification du nombre de mesures met à jour les cases visibles sans effacer les valeurs encore applicables.
 
 ## Accords supportés
+
+Le parseur prend en charge une logique générique `addX`. Le suffixe peut être appliqué à un accord majeur implicite (`Dadd11`) ou à une qualité déjà reconnue (`Cmadd9`, `C7add13`). Les degrés altérés comme `add#11` et `addb9` sont également acceptés.
 
 | Notation | Degrés |
 |---|---|
@@ -42,6 +48,10 @@ GNU TrackGenerator génère des pistes de métronome programmables et reproducti
 | `C7sus4` | `1, 4, 5, b7` |
 | `Cadd2`, `Cμ` | `1, 2, 3, 5` |
 | `Cadd9` | `1, 3, 5, 9` |
+| `Dadd11` | `1, 3, 5, 11` |
+| `Fadd#11` | `1, 3, 5, #11` |
+| `Cmadd9` | `1, b3, 5, 9` |
+| `C7add13` | `1, 3, 5, b7, 13` |
 | `C6` | `1, 3, 5, 6` |
 | `Cm6` | `1, b3, 5, 6` |
 | `Cmaj7` | `1, 3, 5, 7` |
@@ -68,20 +78,21 @@ GNU TrackGenerator génère des pistes de métronome programmables et reproducti
 
 ## Formats de données
 
-Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol` et `chord_instrument` sont optionnels.
+Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, `chord_mode`, `measure_chords` et `chord_instrument` sont optionnels selon le mode harmonique choisi.
 
 ```json
 {
   "app": "GNU TrackGenerator",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "soundfont_path": null,
   "segments": [
     {
       "bpm": 120,
       "numerator": 4,
       "denominator": 4,
-      "measures": 8,
-      "chord_symbol": "C7#9",
+      "measures": 4,
+      "chord_mode": "measure",
+      "measure_chords": ["C", "Am7", "F", "G7"],
       "chord_instrument": "acoustic_guitar"
     }
   ]
@@ -93,6 +104,8 @@ Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol` e
 - Un accord `C7#9` est converti en `<c e g bes ees'>`.
 - Une ligne en `7/8` avec accord produit des accords de durée `1*7/8`.
 - Une ligne en Guitare sèche produit un accord avec `\arpeggio`.
+- Une ligne de quatre mesures en mode par mesure sauvegarde exactement quatre entrées dans `measure_chords`.
+- Une progression `C`, `Am7`, `F`, `G7` génère quatre accords distincts, chacun avec la durée complète de sa mesure.
 - Un projet sans accord continue de générer seulement la portée de click.
 - La conversion MIDI vers WAV tente TiMidity avant FluidSynth.
 

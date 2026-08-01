@@ -24,13 +24,39 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 
 ### Corrigé
 
-- Correction de la syntaxe LilyPond des diagrammes de guitare pour les mesures complexes : les accords sont maintenant générés sous la forme `a1*7/4:m` au lieu de `a:m1*7/4`.
-
 - Rien pour le moment.
 
 ### Sécurité
 
 - Rien pour le moment.
+
+## [0.2.0] - 2026-07-21
+
+### Ajouté
+
+- Ajout d’un parseur générique pour les accords contenant `addX`.
+- Ajout de la prise en charge de formes comme `Dadd11`, `Cmadd9`, `C7add13`, `Fadd#11`, `Bbaddb9` et `D(add11)`.
+- Ajout du calcul algorithmique des degrés composés et altérés à partir de la gamme majeure.
+- Ajout de tests unitaires couvrant les accords `add`, les qualités de base et les degrés altérés.
+- Ajout de l’option **Accord au début de chaque mesure** dans le menu de ligne `☰`.
+- Ajout d’une série dynamique de cases d’accord correspondant exactement au nombre de mesures de la ligne.
+- Ajout de la possibilité de saisir un accord différent pour chaque mesure.
+- Ajout d’un bouton `⌃` pour masquer la zone d’accords par mesure sans effacer les valeurs.
+- Ajout des champs `chord_mode` et `measure_chords` au format `.gen`.
+- Ajout de tests de sauvegarde, de compatibilité ascendante et de génération LilyPond mesure par mesure.
+
+### Changé
+
+- Le logiciel n’exige plus une définition codée séparément pour chaque nouvel accord `addX`.
+- Chaque accord par mesure dure désormais exactement une mesure complète selon la signature rythmique.
+- Les symboles d’accord sont affichés au-dessus de la mesure correspondante dans le PDF.
+- Les portées d’accords et les diagrammes de guitare suivent désormais les progressions mesure par mesure.
+- Les anciens projets utilisant seulement `chord_symbol` restent compatibles et sont interprétés comme des accords par ligne.
+- Passage de la version du projet à `0.2.0`.
+
+### Corrigé
+
+- `Dadd11` et les accords similaires ne sont plus rejetés comme types d’accord inconnus.
 
 ## [0.1.3] - 2026-07-20
 
@@ -57,6 +83,10 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 - Ajout d’un diagnostic automatique du WAV généré pour repérer un fichier vide, silencieux ou très faible.
 - Ajout de la génération automatique d’un fichier `nom_du_fichier.timidity.cfg` lorsque l’utilisateur sélectionne un SoundFont.
 - Ajout d’un test unitaire pour vérifier la génération de la configuration TiMidity avec SoundFont.
+
+### Corrigé
+
+- Correction de la syntaxe LilyPond des diagrammes de guitare pour les mesures complexes : les accords sont générés sous la forme `a1*7/4:m` plutôt que `a:m1*7/4`.
 
 ### Changé
 

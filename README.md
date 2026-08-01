@@ -1,4 +1,4 @@
-![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.1.3-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
+![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.2.0-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
 
 # GNU TrackGenerator
 
@@ -198,18 +198,20 @@ fluidsynth --version
 Si une commande est introuvable, il faut ajouter le dossier contenant l’exécutable correspondant au `PATH` de Windows.
 
 
-## Fonctionnalités de la version 0.1.3
+## Fonctionnalités de la version 0.2.0
 
 - Génération de click tracks programmables par segments : BPM, signature rythmique et nombre de mesures.
 - Menu de ligne `☰` au bout de chaque rangée.
 - Option **Accord au début de chaque ligne** dans le menu de ligne.
+- Option **Accord au début de chaque mesure**, avec une case distincte pour chaque mesure de la ligne.
 - Saisie d’accords sous forme de symboles musicaux standard basés sur les notes A, B, C, D, E, F, G.
 - Conversion automatique des symboles d’accords en notes LilyPond.
+- Interprétation générique de la notation `addX`, par exemple `Dadd11`, `Cmadd9`, `C7add13`, `Fadd#11` ou `Bbaddb9`.
 - Instruments disponibles pour la portée d’accords : **Piano**, **Strings** et **Guitare sèche**.
 - Pour la **Guitare sèche**, les accords sont générés avec un rendu strummé/arpégé grâce à `\arpeggio`.
 - Affichage du symbole d’accord exact au-dessus de la partition PDF, au début de chaque mesure concernée.
 - Affichage de diagrammes d’accords de guitare via `FretBoards` lorsque l’instrument est **Guitare sèche** et que LilyPond possède un diagramme prédéfini.
-- Sauvegarde des accords et instruments dans le fichier `.gen`.
+- Sauvegarde du mode d’accord, des accords par mesure et de l’instrument dans le fichier `.gen`.
 - Génération d’une portée d’accords séparée lorsque des accords sont définis.
 - Conversion MIDI vers WAV avec **TiMidity en priorité**, puis FluidSynth comme solution de repli.
 - Affichage en direct des commandes exécutées pendant la génération.
@@ -217,6 +219,20 @@ Si une commande est introuvable, il faut ajouter le dossier contenant l’exécu
 - Diagnostic automatique du fichier WAV généré : taille, durée, fréquence, nombre de canaux et détection d’un fichier silencieux.
 
 
+
+### Accords au début de chaque mesure
+
+Pour définir une progression harmonique mesure par mesure :
+
+1. Cliquer sur le bouton `☰` de la ligne.
+2. Choisir **Accord → Accord au début de chaque mesure**.
+3. Saisir un accord dans chacune des cases affichées sous la ligne.
+4. Modifier le nombre de mesures pour ajouter ou retirer automatiquement des cases visibles.
+5. Utiliser `⌃` pour masquer la zone sans perdre les valeurs saisies.
+
+Le menu permet aussi de choisir **Accord → Désactiver les accords** afin de revenir à une ligne de click simple tout en conservant temporairement les valeurs saisies dans l’interface.
+
+Chaque case correspond exactement à une mesure. L’accord est généré avec la durée complète de cette mesure, y compris pour des signatures complexes comme `7/8`, `5/4` ou `27/16`. Une case laissée vide produit une mesure sans accord.
 
 ### Affichage des accords dans le PDF
 
@@ -257,7 +273,17 @@ TiMidity peut convertir un MIDI en WAV avec l’option `-Ow`, mais il doit avoir
 
 ### Accords supportés
 
-La saisie d’accord utilise des symboles comme `C`, `Cm`, `C7`, `F#maj7`, `Bb9` ou `C7#9`. Les formes suivantes sont prises en charge pour toutes les fondamentales A à G, avec accidentels `#` ou `b` lorsque nécessaire.
+La saisie d’accord utilise des symboles comme `C`, `Cm`, `C7`, `F#maj7`, `Bb9`, `C7#9` ou `Dadd11`. Les formes suivantes sont prises en charge pour toutes les fondamentales A à G, avec accidentels `#` ou `b` lorsque nécessaire.
+
+La famille `addX` est interprétée de manière générique : le logiciel part de l’accord de base, puis ajoute le degré demandé sans qu’une définition particulière soit nécessaire pour chaque accord. Exemples :
+
+- `Dadd11` → `1, 3, 5, 11`;
+- `Cmadd9` → `1, b3, 5, 9`;
+- `C7add13` → `1, 3, 5, b7, 13`;
+- `Fadd#11` → `1, 3, 5, #11`;
+- `Bbaddb9` → `1, 3, 5, b9`.
+
+Les formes parenthésées, comme `D(add11)`, sont également acceptées.
 
 | Notation | Degrés |
 |---|---|
@@ -272,6 +298,10 @@ La saisie d’accord utilise des symboles comme `C`, `Cm`, `C7`, `F#maj7`, `Bb9`
 | `C7sus4` | `1, 4, 5, b7` |
 | `Cadd2`, `Cμ` | `1, 2, 3, 5` |
 | `Cadd9` | `1, 3, 5, 9` |
+| `Dadd11` | `1, 3, 5, 11` |
+| `Fadd#11` | `1, 3, 5, #11` |
+| `Cmadd9` | `1, b3, 5, 9` |
+| `C7add13` | `1, 3, 5, b7, 13` |
 | `C6` | `1, 3, 5, 6` |
 | `Cm6` | `1, b3, 5, 6` |
 | `Cmaj7` | `1, 3, 5, 7` |

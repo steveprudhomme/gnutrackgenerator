@@ -23,64 +23,34 @@ Objectif : consolider la base fonctionnelle actuelle avant d’ajouter des fonct
 - Choix d’instrument : Piano, Strings et Guitare sèche.
 - Rendu strummé/arpégé pour la Guitare sèche.
 
-## v0.2.0 — Accords par mesure et enrichissement harmonique
+## v0.2.0 — Accords par mesure et enrichissement harmonique — réalisé
 
-Objectif : poursuivre l’édition harmonique maintenant que la version 0.1.3 contient déjà le menu de ligne, l’accord au début de chaque ligne, la conversion de symboles d’accords et le choix Piano / Strings / Guitare sèche.
+Objectif : permettre à l’utilisateur de définir une progression harmonique différente dans chaque mesure d’une ligne.
 
-### 1. Stabiliser le menu de ligne existant
+### Éléments intégrés
 
-- Améliorer l’ergonomie de l’icône « trois lignes » déjà présente à l’extrémité de chaque ligne musicale.
-- Le menu doit permettre d’activer des options propres à la ligne courante.
-- Le menu doit rester compact afin de ne pas surcharger l’interface principale.
+- Ajout de l’option **Accord au début de chaque mesure** dans le menu `☰`.
+- Affichage dynamique d’une case de saisie par mesure.
+- Mise à jour automatique du nombre de cases lorsque le nombre de mesures change.
+- Conservation des valeurs saisies lorsque la zone est simplement masquée avec `⌃`.
+- Saisie d’un accord différent dans chaque case.
+- Interprétation d’une case vide comme une mesure sans accord.
+- Durée automatique de chaque accord égale à une mesure complète, y compris pour les signatures asymétriques.
+- Affichage de chaque symbole au-dessus de la mesure correspondante dans le PDF.
+- Génération audio mesure par mesure sur la portée harmonique.
+- Génération de diagrammes de guitare mesure par mesure lorsque disponibles.
+- Extension rétrocompatible du format `.gen` avec `chord_mode` et `measure_chords`.
+- Tests unitaires et de non-régression pour la sauvegarde et la génération LilyPond.
 
-### 2. Enrichir l’option « Accord » dans le menu
+### Interprétation générique des accords `addX`
 
-- Conserver et enrichir l’entrée **Accord** dans le menu de ligne.
-- L’entrée **Accord** doit ouvrir un sous-menu ou un panneau d’options liées aux accords.
-- Les options d’accord doivent être désactivables afin que l’utilisateur puisse revenir à une ligne simple de click track.
+- Compréhension de `add2`, `add4`, `add6`, `add9`, `add11`, `add13` et d’autres degrés positifs.
+- Prise en charge des degrés altérés comme `addb9`, `add#9`, `add#11` et `addb13`.
+- Application d’un ajout à une qualité existante, par exemple `Cmadd9` ou `C7add13`.
+- Acceptation des formes parenthésées comme `D(add11)`.
+- Calcul algorithmique des intervalles au lieu d’une table exhaustive d’accords.
+- Tests unitaires et messages d’erreur dédiés.
 
-### 2.1. Accord au début de chaque ligne — stabilisation
-
-Objectif : stabiliser la fonction déjà intégrée en 0.1.3 et améliorer sa validation.
-
-- Ajouter l’option **Accord au début de chaque ligne**.
-- Lorsqu’elle est activée, afficher sous la ligne principale une zone de saisie dédiée à l’accord.
-- Cette zone doit indiquer clairement que l’accord saisi s’applique à toute la ligne.
-- L’utilisateur peut saisir l’accord dans cette zone.
-- L’accord se répète à chaque mesure de la ligne.
-- Chaque accord doit durer l’équivalent d’une mesure complète.
-- Les notes générées pour l’accord doivent donc avoir une durée correspondant à la grandeur de la mesure en question.
-- L’utilisateur peut fermer ou masquer la zone de saisie grâce à une icône ou un caractère de flèche.
-
-### 2.2. Sous-menu : accord au début de chaque mesure
-
-Objectif : permettre à l’utilisateur de définir un accord différent pour chaque mesure d’une ligne.
-
-- Ajouter l’option **Accord au début de chaque mesure**.
-- Lorsqu’elle est activée, afficher sous la ligne principale une série de cases de saisie.
-- Le nombre de cases affichées doit correspondre au nombre de mesures défini pour la ligne.
-- Chaque case représente l’accord à jouer au début de la mesure correspondante.
-- L’utilisateur peut saisir un accord différent dans chaque case.
-- Chaque accord doit durer l’équivalent d’une mesure complète.
-- Les notes générées pour chaque accord doivent donc avoir une durée correspondant à la grandeur de la mesure en question.
-- L’utilisateur peut fermer ou masquer la zone de saisie grâce à une icône ou un caractère de flèche.
-
-### 2.3. Comportement attendu du moteur de génération
-
-- Étendre le format `.gen` afin de sauvegarder les accords associés aux lignes.
-- Préserver la compatibilité avec les anciens fichiers `.gen` qui ne contiennent aucun accord.
-- Générer le code LilyPond nécessaire pour représenter les accords saisis.
-- Déterminer comment les accords doivent cohabiter avec le `DrumStaff` existant : portée séparée, voix parallèle, ou export harmonique optionnel.
-- Valider les accords saisis avant la génération.
-- Produire des messages d’erreur compréhensibles lorsqu’un accord est invalide.
-
-### 2.4. Points à clarifier avant développement
-
-- Définir la syntaxe d’accord acceptée : noms français, noms anglais, notation LilyPond, ou format interne.
-- Déterminer si les accords doivent produire un rendu MIDI/WAV ou seulement une partition LilyPond.
-- Déterminer si les accords doivent être visibles dans une portée distincte ou intégrés à la portée existante.
-- Définir la règle exacte pour les signatures complexes comme `7/8`, `11/16` ou `27/16`.
-- Définir le comportement lorsqu’un nombre de mesures est modifié après la saisie des accords par mesure.
 
 ## v0.3.0 — Amélioration musicale du click track
 
