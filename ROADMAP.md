@@ -150,8 +150,8 @@ Créer une palette d’historique inspirée des logiciels de création comme Pho
 
 ### 1. Dupliquer une ligne
 
-- Ajouter une commande **Dupliquer la ligne**.
-- Copier l’intégralité du contenu de la ligne :
+- ✅ **Réalisé en v0.6.0** — bouton **D** de duplication placé directement à droite du bouton `−`.
+- ✅ **Réalisé en v0.6.0** — copie intégrale et indépendante du contenu de la ligne :
   - BPM;
   - signature rythmique;
   - nombre de mesures;
@@ -161,20 +161,19 @@ Créer une palette d’historique inspirée des logiciels de création comme Pho
   - instrument;
   - réglages d’arpégiateur;
   - futurs réglages de strum.
-- Insérer la copie immédiatement sous la ligne d’origine.
-- Créer une copie indépendante : modifier la copie ne doit pas modifier l’original.
-- Rendre l’action compatible avec **Annuler**.
+- ✅ **Réalisé en v0.6.0** — insertion de la copie immédiatement sous la ligne d’origine.
+- ✅ **Réalisé en v0.6.0** — la copie est indépendante : la modifier ne modifie pas l’original.
+- ✅ **Réalisé en v0.6.0** — action compatible avec **Annuler** et **Rétablir**.
 
 ### 2. Réordonner les lignes
 
-- Ajouter à droite de chaque ligne des commandes permettant de la déplacer.
-- Première implémentation recommandée :
-  - bouton **Monter**;
-  - bouton **Descendre**.
-- Une évolution ultérieure pourra ajouter le glisser-déposer.
-- Déplacer la ligne avec tout son contenu, sans désynchroniser les accords ou les réglages d’arpégiateur.
-- Mettre à jour l’ordre sauvegardé dans le fichier `.gen`.
-- Rendre chaque déplacement compatible avec **Annuler**.
+- ✅ **Réalisé en v0.6.0** — poignée `⠿` à droite de chaque ligne.
+- ✅ **Réalisé en v0.6.0** — déplacement par cliquer-glisser vers la position voulue.
+- ✅ **Réalisé en v0.6.0** — déplacement de la ligne avec tout son contenu, sans désynchroniser les accords ou les réglages d’arpégiateur.
+- ✅ **Réalisé en v0.6.0** — mise à jour de l’ordre sauvegardé dans le fichier `.gen`.
+- ✅ **Réalisé en v0.6.0** — un glisser-déposer complet correspond à une seule étape Annuler/Rétablir.
+- Prévoir ultérieurement le défilement automatique lorsque le pointeur approche du haut ou du bas d’une longue séquence.
+- Prévoir des commandes clavier ou boutons Monter/Descendre pour l’accessibilité.
 
 ### 3. Désactiver le click track
 
@@ -369,6 +368,16 @@ où `D` signifie *downstroke*, `U` *upstroke* et `-` une absence d’attaque.
 - Correction de la durée totale des groupes N-olets.
 - Tolérance de notations comme `C5m`.
 - Tests de non-régression pour les progressions complexes.
+
+---
+
+## v0.6.0 — Duplication et réorganisation des lignes
+
+- Duplication complète d’une ligne avec le bouton **D** placé à droite du bouton `−`.
+- Copie profonde et indépendante des données imbriquées.
+- Déplacement des lignes par cliquer-glisser avec une poignée dédiée.
+- Ordre de séquence conservé dans les sauvegardes et les exports.
+- Compatibilité complète avec Annuler et Rétablir.
 
 ---
 

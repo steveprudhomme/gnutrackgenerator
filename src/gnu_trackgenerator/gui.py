@@ -27,6 +27,7 @@ from .arpeggiator import (
 from .chords import ChordParseError, SUPPORTED_CHORD_EXAMPLES, chord_symbol_to_lilypond_chord
 from .generator import GenerationError, generate_project
 from .history import UndoHistory
+from .sequence import duplicate_row_state, move_item
 from .models import (
     APP_NAME,
     APP_VERSION,
@@ -189,6 +190,10 @@ class SegmentRow(ctk.CTkFrame):
         master: ctk.CTkFrame,
         on_add_after,
         on_remove,
+        on_duplicate=None,
+        on_drag_start=None,
+        on_drag_motion=None,
+        on_drag_end=None,
         on_change=None,
         defaults: Segment | None = None,
         **kwargs,
@@ -196,6 +201,10 @@ class SegmentRow(ctk.CTkFrame):
         super().__init__(master, **kwargs)
         self.on_add_after = on_add_after
         self.on_remove = on_remove
+        self.on_duplicate = on_duplicate or (lambda _row: None)
+        self.on_drag_start = on_drag_start or (lambda _row, _event: None)
+        self.on_drag_motion = on_drag_motion or (lambda _row, _event: None)
+        self.on_drag_end = on_drag_end or (lambda _row, _event: None)
         self.on_change = on_change or (lambda: None)
         self.menu_visible = False
         self.chord_mode = CHORD_MODE_NONE
@@ -341,7 +350,7 @@ class SegmentRow(ctk.CTkFrame):
 
     def _build_widgets(self) -> None:
         """Create and place row widgets."""
-        for col in range(11):
+        for col in range(13):
             self.grid_columnconfigure(col, weight=1 if col in {1, 3, 5, 7} else 0)
 
         ctk.CTkLabel(self, text="BPM").grid(row=0, column=0, padx=(8, 4), pady=8)
@@ -370,8 +379,33 @@ class SegmentRow(ctk.CTkFrame):
         ctk.CTkButton(self, text="−", width=34, command=lambda: self.on_remove(self)).grid(
             row=0, column=9, padx=(2, 2), pady=8
         )
+        ctk.CTkButton(
+            self,
+            text="D",
+            width=34,
+            command=lambda: self.on_duplicate(self),
+        ).grid(row=0, column=10, padx=(2, 2), pady=8)
         ctk.CTkButton(self, text="☰", width=38, command=self.toggle_menu).grid(
-            row=0, column=10, padx=(2, 8), pady=8
+            row=0, column=11, padx=(2, 2), pady=8
+        )
+        self.drag_handle = ctk.CTkLabel(
+            self,
+            text="⠿",
+            width=34,
+            height=28,
+            corner_radius=6,
+            fg_color=("gray82", "gray28"),
+            font=ctk.CTkFont(size=19, weight="bold"),
+        )
+        self.drag_handle.grid(row=0, column=12, padx=(2, 8), pady=8)
+        self.drag_handle.bind(
+            "<ButtonPress-1>", lambda event: self.on_drag_start(self, event)
+        )
+        self.drag_handle.bind(
+            "<B1-Motion>", lambda event: self.on_drag_motion(self, event)
+        )
+        self.drag_handle.bind(
+            "<ButtonRelease-1>", lambda event: self.on_drag_end(self, event)
         )
 
         self.menu_frame = ctk.CTkFrame(self)
@@ -400,7 +434,7 @@ class SegmentRow(ctk.CTkFrame):
             self.menu_frame,
             text="Accord → Désactiver les accords",
             command=self.disable_chords,
-        ).grid(row=3, column=1, padx=8, pady=(4, 8), sticky="ew")
+        ).grid(row=3, column=1, padx=8, pady=4, sticky="ew")
         ctk.CTkButton(self.menu_frame, text="Masquer", width=80, command=self.hide_menu).grid(
             row=0, column=2, rowspan=4, padx=(8, 10), pady=8
         )
@@ -576,7 +610,7 @@ class SegmentRow(ctk.CTkFrame):
         if self.menu_visible:
             self.hide_menu()
         else:
-            self.menu_frame.grid(row=1, column=0, columnspan=11, padx=8, pady=(0, 6), sticky="ew")
+            self.menu_frame.grid(row=1, column=0, columnspan=12, padx=8, pady=(0, 6), sticky="ew")
             self.menu_visible = True
 
     def hide_menu(self) -> None:
@@ -595,7 +629,7 @@ class SegmentRow(ctk.CTkFrame):
         changed = self.chord_mode != CHORD_MODE_LINE
         self.chord_mode = CHORD_MODE_LINE
         self._hide_all_chord_frames()
-        self.line_chord_frame.grid(row=2, column=0, columnspan=11, padx=8, pady=(0, 8), sticky="ew")
+        self.line_chord_frame.grid(row=2, column=0, columnspan=12, padx=8, pady=(0, 8), sticky="ew")
         self.line_chord_visible = True
         self.hide_menu()
         if changed:
@@ -610,7 +644,7 @@ class SegmentRow(ctk.CTkFrame):
         self.chord_mode = CHORD_MODE_MEASURE
         self._hide_all_chord_frames()
         self._rebuild_measure_chord_inputs()
-        self.measure_chord_frame.grid(row=2, column=0, columnspan=11, padx=8, pady=(0, 8), sticky="ew")
+        self.measure_chord_frame.grid(row=2, column=0, columnspan=12, padx=8, pady=(0, 8), sticky="ew")
         self.measure_chord_visible = True
         self.hide_menu()
         if changed:
@@ -625,7 +659,7 @@ class SegmentRow(ctk.CTkFrame):
         self.chord_mode = CHORD_MODE_GRID
         self._hide_all_chord_frames()
         self._rebuild_grid_chord_inputs()
-        self.grid_chord_frame.grid(row=2, column=0, columnspan=11, padx=8, pady=(0, 8), sticky="ew")
+        self.grid_chord_frame.grid(row=2, column=0, columnspan=12, padx=8, pady=(0, 8), sticky="ew")
         self.grid_chord_visible = True
         self.hide_menu()
         if changed:
@@ -872,6 +906,8 @@ class TrackGeneratorApp(ctk.CTk):
         self.history: UndoHistory[dict] = UndoHistory(max_entries=100)
         self._history_suspended = True
         self._history_after_id: str | None = None
+        self._dragged_row: SegmentRow | None = None
+        self._drag_original_index: int | None = None
 
         self._build_menu()
         self._build_layout()
@@ -1103,6 +1139,10 @@ class TrackGeneratorApp(ctk.CTk):
             self.rows_frame,
             on_add_after=lambda current: self.add_row(after=current),
             on_remove=self.remove_row,
+            on_duplicate=self.duplicate_row,
+            on_drag_start=self._start_row_drag,
+            on_drag_motion=self._drag_row,
+            on_drag_end=self._end_row_drag,
             on_change=self._schedule_history_record,
             defaults=defaults,
         )
@@ -1128,8 +1168,71 @@ class TrackGeneratorApp(ctk.CTk):
         self._refresh_rows_grid()
         self._commit_history_snapshot()
 
+    def duplicate_row(self, row: SegmentRow) -> None:
+        """Duplicate a row with all editable values and insert it below."""
+        if row not in self.rows:
+            return
+        self._flush_pending_history()
+        state = duplicate_row_state(row.to_history_state())
+        self._history_suspended = True
+        try:
+            duplicate = self.add_row(after=row, record_history=False)
+            duplicate.apply_history_state(state)
+            self._refresh_rows_grid()
+        finally:
+            self._history_suspended = False
+        self._commit_history_snapshot()
+
+    def _start_row_drag(self, row: SegmentRow, _event=None):
+        """Begin a drag-and-drop row reorder operation."""
+        if row not in self.rows:
+            return "break"
+        self._flush_pending_history()
+        self._dragged_row = row
+        self._drag_original_index = self.rows.index(row)
+        row.configure(border_width=2)
+        return "break"
+
+    def _drag_row(self, row: SegmentRow, _event=None):
+        """Move the dragged row to the position nearest the pointer."""
+        if self._dragged_row is not row or row not in self.rows:
+            return "break"
+        self.update_idletasks()
+        pointer_y = self.winfo_pointery()
+        target_index = min(
+            range(len(self.rows)),
+            key=lambda index: abs(
+                pointer_y
+                - (
+                    self.rows[index].winfo_rooty()
+                    + max(self.rows[index].winfo_height(), 1) / 2
+                )
+            ),
+        )
+        current_index = self.rows.index(row)
+        if target_index != current_index:
+            move_item(self.rows, current_index, target_index)
+            self._refresh_rows_grid()
+            self.update_idletasks()
+        return "break"
+
+    def _end_row_drag(self, row: SegmentRow, _event=None):
+        """Finish drag-and-drop and store one history step if order changed."""
+        if self._dragged_row is not row:
+            return "break"
+        row.configure(border_width=0)
+        original_index = self._drag_original_index
+        final_index = self.rows.index(row) if row in self.rows else None
+        self._dragged_row = None
+        self._drag_original_index = None
+        if original_index is not None and final_index != original_index:
+            self._commit_history_snapshot()
+        else:
+            self._update_history_controls()
+        return "break"
+
     def _refresh_rows_grid(self) -> None:
-        """Re-grid rows after add/remove operations."""
+        """Re-grid rows after add, remove, duplicate, or reorder operations."""
         for index, row in enumerate(self.rows):
             row.grid(row=index, column=0, padx=8, pady=6, sticky="ew")
 

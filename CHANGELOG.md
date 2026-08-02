@@ -30,6 +30,29 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 
 - Rien pour le moment.
 
+## [0.6.0] - 2026-08-02
+
+### Ajouté
+
+- Bouton **D** placé immédiatement à droite du bouton `−` de chaque segment pour dupliquer directement la ligne.
+- Duplication complète et indépendante des paramètres de ligne, accords, grilles rythmiques, instruments et réglages d’arpégiateur.
+- Poignée `⠿` à droite de chaque ligne pour la réorganisation par cliquer-glisser.
+- Module `sequence.py` indépendant de l’interface pour la copie profonde et le déplacement d’éléments.
+- Tests unitaires de duplication profonde et de réordonnancement.
+
+### Changé
+
+- L’ordre des lignes peut maintenant être modifié directement dans la séquence musicale.
+- La duplication insère la copie immédiatement sous la ligne d’origine.
+- La commande de duplication est accessible directement depuis la ligne et a été retirée du menu `☰`.
+- Le bouton **D** est positionné après le bouton `−`, selon l’ordre `+`, `−`, **D**, `☰`, `⠿`.
+- La duplication et chaque glisser-déposer complet sont intégrés comme une seule étape aux commandes Annuler/Rétablir.
+- L’ordre affiché demeure l’ordre sauvegardé dans le fichier `.gen` et utilisé lors de la génération.
+- Passage de la version du projet à `0.6.0`.
+
+### Corrigé
+
+- La copie d’une ligne ne partage pas ses listes d’accords ou ses réglages imbriqués avec la ligne d’origine.
 ## [0.5.1] - 2026-08-02
 
 ### Ajouté

@@ -124,7 +124,7 @@ Consulter `SUPPORT.md` avant d’ouvrir un ticket. Pour signaler un bogue, utili
 
 ## Annuler ou rétablir une modification
 
-La version 0.5.1 propose les deux directions de l’historique d’édition.
+La version 0.6.0 propose les deux directions de l’historique d’édition et l’organisation interactive de la séquence.
 
 Pour **annuler** :
 
@@ -246,3 +246,21 @@ Si le fichier WAV est généré mais ne contient pas de son, vérifier dans le j
 - la présence d’un SoundFont valide, par exemple `CrisisGeneralMidi301.sf2`.
 
 TiMidity peut convertir un MIDI en WAV avec l’option `-Ow`, mais il doit avoir une banque de sons utilisable. Lorsque l’utilisateur sélectionne un SoundFont, GNU TrackGenerator génère maintenant une configuration TiMidity dédiée et l’appelle avec `-c`. Si le rendu TiMidity reste silencieux ou extrêmement faible et que FluidSynth est disponible, l’application tente un rendu de repli avec FluidSynth et le même SoundFont.
+
+## Dupliquer une ligne
+
+1. Repérer le bouton **D**, placé immédiatement à droite du bouton `−`.
+2. Cliquer sur **D**.
+3. La copie apparaît immédiatement sous l’original.
+
+La copie comprend tous les champs, les accords, les grilles rythmiques, l’instrument et les réglages d’arpégiateur. Elle est indépendante de l’original. La duplication constitue une seule étape dans l’historique Annuler/Rétablir.
+
+## Déplacer une ligne par cliquer-glisser
+
+1. Repérer la poignée `⠿` à droite de la ligne.
+2. Maintenir le bouton principal de la souris sur la poignée.
+3. Déplacer la ligne vers sa nouvelle position.
+4. Relâcher le bouton.
+
+Le déplacement entier correspond à une seule étape dans l’historique. Utiliser `Ctrl+Z` pour revenir à l’ordre précédent, puis `Ctrl+Y` ou `Ctrl+Maj+Z` pour rétablir le déplacement.
+

@@ -44,6 +44,10 @@ GNU TrackGenerator génère des pistes de métronome programmables et reproducti
 - `REQ-029` — Un N-olet est saisi par un nombre N de 3 à 32. La valeur rythmique sélectionnée représente la durée totale du groupe, dans laquelle exactement N notes sont réparties. Lorsque N vaut `0`, la valeur sélectionnée représente la durée de chaque note.
 - `REQ-030` — Le motif aléatoire est reproductible pour une même sauvegarde.
 - `REQ-031` — Une virgule de continuation conserve l’arpégiateur de l’accord précédent.
+- `REQ-032` — Chaque ligne possède un bouton **D** placé immédiatement à droite du bouton `−`.
+- `REQ-033` — Le bouton **D** duplique la ligne et insère la copie immédiatement sous l’original.
+- `REQ-034` — La duplication copie profondément tous les champs, accords, instruments et réglages d’arpégiateur.
+- `REQ-035` — La duplication constitue une seule action compatible avec Annuler et Rétablir.
 
 ## Accords supportés
 
@@ -113,7 +117,7 @@ Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, 
 ```json
 {
   "app": "GNU TrackGenerator",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "soundfont_path": null,
   "segments": [
     {
@@ -182,3 +186,12 @@ Exemple du mode rythmique :
 - La portée d’accords continue de produire le rendu MIDI/WAV selon l’instrument choisi.
 - Si l’instrument choisi est `acoustic_guitar`, le fichier LilyPond inclut `predefined-guitar-fretboards.ly` et ajoute une ligne `FretBoards` lorsque le symbole d’accord peut être converti en diagramme prédéfini.
 - Si le diagramme de guitare n’est pas disponible, la génération ne doit pas échouer : le symbole textuel demeure visible au-dessus de la partition.
+
+## Duplication et réordonnancement des segments
+
+La duplication utilise un instantané brut de la ligne afin de conserver les valeurs temporairement invalides et toutes les structures imbriquées. L’instantané est copié profondément avant d’être appliqué à une nouvelle ligne placée immédiatement sous l’original.
+
+Le réordonnancement est déclenché par la poignée `⠿`. Pendant le glisser-déposer, la liste des objets `SegmentRow` est réordonnée et les lignes sont replacées dans la grille. L’historique n’enregistre qu’un état au relâchement de la souris afin qu’un déplacement complet corresponde à une seule commande Annuler.
+
+L’ordre des éléments dans `ProjectData.segments` provient directement de l’ordre courant des lignes dans l’interface. Aucun nouveau champ n’est nécessaire dans le format `.gen`; la position dans le tableau `segments` reste la source de vérité.
+
