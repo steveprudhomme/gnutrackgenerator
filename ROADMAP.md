@@ -1,153 +1,332 @@
 # ROADMAP — GNU TrackGenerator
 
-Ce document présente les pistes d’évolution envisagées pour GNU TrackGenerator. Il ne constitue pas une promesse contractuelle : les priorités pourront évoluer selon les besoins des utilisateurs, les contributions, la stabilité technique et les décisions de gouvernance du projet.
+Ce document présente les orientations de développement envisagées pour GNU TrackGenerator. Il ne constitue pas une promesse contractuelle : les priorités peuvent évoluer selon les besoins des utilisateurs, les contributions, la stabilité technique et les décisions de gouvernance.
 
-## v0.1.x — Stabilisation du socle
+## Principes de priorisation
 
-Objectif : consolider la base fonctionnelle actuelle avant d’ajouter des fonctions musicales plus avancées.
+Les fonctionnalités sont classées selon quatre critères :
 
-- Maintenir une interface graphique CustomTkinter simple et lisible.
-- Garder une séparation claire entre l’interface, les modèles, la sauvegarde et le moteur de génération.
-- Améliorer les messages d’erreur pour LilyPond, FluidSynth, TiMidity et les SoundFonts.
-- Documenter les chemins système requis pour les outils externes.
-- Ajouter des tests unitaires pour la validation des segments et la génération LilyPond.
-- Garder la licence, la gouvernance, le support et les modèles de contribution à jour.
-- Maintenir la compatibilité du format `.gen` avec les projets contenant des accords symboliques.
+1. **Fondations techniques** : gestion fiable de l’état du projet, de l’historique et des préférences.
+2. **Productivité d’édition** : réduction des manipulations répétitives et prévention des pertes de données.
+3. **Valeur musicale** : enrichissement des possibilités de composition et d’interprétation.
+4. **Dépendances** : une fonctionnalité est placée après les mécanismes dont elle dépend.
 
-### Éléments déjà intégrés dans 0.1.3
+Les versions et leur contenu restent indicatifs. Une fonctionnalité peut être déplacée si sa complexité ou ses dépendances l’exigent.
 
-- Icône de menu `☰` au bout de chaque ligne.
-- Option **Accord au début de chaque ligne**.
-- Saisie d’accords selon la notation A, B, C, D, E, F, G.
-- Conversion automatique des accords vers LilyPond.
-- Choix d’instrument : Piano, Strings et Guitare sèche.
-- Rendu strummé/arpégé pour la Guitare sèche.
+---
 
-## v0.2.0 — Accords par mesure et enrichissement harmonique — réalisé
+# Priorités à venir
 
-Objectif : permettre à l’utilisateur de définir une progression harmonique différente dans chaque mesure d’une ligne.
+## Priorité 1 — v0.5.0 : navigation, persistance et historique d’édition
 
-### Éléments intégrés
+**Objectif :** rendre l’application plus sûre et plus conforme aux conventions d’un logiciel de bureau avant d’ajouter d’autres outils d’édition.
 
-- Ajout de l’option **Accord au début de chaque mesure** dans le menu `☰`.
-- Affichage dynamique d’une case de saisie par mesure.
-- Mise à jour automatique du nombre de cases lorsque le nombre de mesures change.
-- Conservation des valeurs saisies lorsque la zone est simplement masquée avec `⌃`.
-- Saisie d’un accord différent dans chaque case.
-- Interprétation d’une case vide comme une mesure sans accord.
-- Durée automatique de chaque accord égale à une mesure complète, y compris pour les signatures asymétriques.
-- Affichage de chaque symbole au-dessus de la mesure correspondante dans le PDF.
-- Génération audio mesure par mesure sur la portée harmonique.
-- Génération de diagrammes de guitare mesure par mesure lorsque disponibles.
-- Extension rétrocompatible du format `.gen` avec `chord_mode` et `measure_chords`.
-- Tests unitaires et de non-régression pour la sauvegarde et la génération LilyPond.
+### 1. Historique d’édition
 
-### Interprétation générique des accords `addX`
+- Ajouter la commande **Annuler** avec le raccourci `Ctrl+Z`.
+- Prévoir également **Rétablir** avec `Ctrl+Y` ou `Ctrl+Maj+Z`.
+- Centraliser les modifications du projet dans un historique réversible.
+- Couvrir progressivement les actions suivantes :
+  - ajout et suppression d’une ligne;
+  - modification du tempo, de la signature et du nombre de mesures;
+  - modification des accords;
+  - changement du mode d’accord;
+  - réglages d’arpégiateur;
+  - duplication et déplacement de lignes;
+  - activation ou désactivation du click track.
+- Limiter la taille de l’historique afin d’éviter une consommation excessive de mémoire.
+- Vider ou reconstruire correctement l’historique lors de l’ouverture d’un autre projet.
 
-- Compréhension de `add2`, `add4`, `add6`, `add9`, `add11`, `add13` et d’autres degrés positifs.
-- Prise en charge des degrés altérés comme `addb9`, `add#9`, `add#11` et `addb13`.
-- Application d’un ajout à une qualité existante, par exemple `Cmadd9` ou `C7add13`.
-- Acceptation des formes parenthésées comme `D(add11)`.
-- Calcul algorithmique des intervalles au lieu d’une table exhaustive d’accords.
-- Tests unitaires et messages d’erreur dédiés.
+### 2. Menu **Fichier**
 
+Regrouper les commandes de projet dans un menu standard :
 
-## v0.3.0 — Grille rythmique d’accords — réalisé
+- **Ouvrir…** : charger un projet `.gen`;
+- **Enregistrer** : sauvegarder dans le fichier courant;
+- **Enregistrer sous…** : choisir un nouveau nom ou emplacement;
+- **Exporter…** : générer les fichiers `.ly`, `.pdf`, `.mid`, `.wav` et les journaux;
+- prévoir les raccourcis habituels lorsque pertinents :
+  - `Ctrl+O`;
+  - `Ctrl+S`;
+  - `Ctrl+Maj+S`.
 
-Objectif : permettre des changements d’accords à l’intérieur des mesures selon une valeur rythmique choisie.
+### 3. Nom du projet dans la barre de titre
 
-### Éléments intégrés
+- Afficher le nom du fichier `.gen` actuellement ouvert dans la barre de titre.
+- Utiliser un libellé du type :
 
-- Nouveau mode **Accords selon une subdivision rythmique** dans le menu `☰`.
-- Valeurs disponibles : blanche, blanche pointée, noire, noire pointée, croche et triolets de rondes, blanches, noires ou croches.
-- Calcul exact des cases avec des fractions rationnelles, y compris dans les signatures asymétriques.
-- Exemple : quatre mesures en `4/4` divisées en noires produisent 16 cases.
-- Reconstruction dynamique de la grille lorsque la signature, le nombre de mesures ou la subdivision change.
-- Une case vide produit un silence.
-- Une virgule `,` prolonge l’accord précédent sans nouvelle attaque.
-- Fusion des prolongations dans le MIDI/WAV et liaison LilyPond lorsqu’un accord traverse une barre de mesure.
-- Affichage des symboles seulement lors des nouvelles attaques d’accords.
-- Diagrammes de guitare placés uniquement au début des nouveaux accords.
-- Extension rétrocompatible du format `.gen` avec `chord_grid_unit` et `grid_chords`.
-- Tests pour les subdivisions, les triolets, les fins de ligne ajustées et les prolongations.
+```text
+GNU TrackGenerator — MonProjet.gen
+```
 
-### Pistes pour la série 0.3.x
+- Ajouter un indicateur visuel lorsque le projet contient des modifications non enregistrées, par exemple :
 
-- Choix du son pour le premier temps et les temps secondaires.
-- Accentuation configurable par subdivision.
-- Groupements visuels des mesures composées, par exemple `3+2+2/8`.
-- Prévisualisation textuelle de la grille avant génération.
+```text
+GNU TrackGenerator — MonProjet.gen *
+```
 
+- Afficher **Nouveau projet** tant qu’aucun fichier `.gen` n’a été associé.
 
-## v0.4.0 — Arpégiateur par accord — réalisé
+### 4. Menu **Édition → Options**
 
-Objectif : permettre à chaque champ d’accord de définir son propre motif arpégé.
+- Déplacer la configuration du SoundFont dans **Édition → Options**.
+- Conserver le chemin du SoundFont après la fermeture de l’application.
+- Enregistrer les préférences utilisateur dans un fichier de configuration distinct du projet `.gen`.
+- Prévoir la même architecture pour les chemins de :
+  - LilyPond;
+  - TiMidity;
+  - FluidSynth;
+  - autres outils externes futurs.
+- Valider les chemins au moment de leur saisie et afficher un diagnostic compréhensible.
 
-### Éléments intégrés
+### 5. Menu **?**
 
-- Bouton **A** sous chaque accord des trois modes harmonique.
-- Activation ou désactivation individuelle de l’arpégiateur.
-- Motifs descendant-montant, montant-descendant et aléatoire reproductible.
-- Choix du nombre d’octaves.
-- Valeurs rythmiques de la ronde à la double croche et équivalents pointés.
-- N-olets génériques saisis par un nombre de 3 à 32.
-- Sauvegarde rétrocompatible dans les champs `arpeggiator`, `measure_arpeggiators` et `grid_arpeggiators`.
-- Génération de notes individuelles, de N-olets LilyPond et de MIDI/WAV correspondants.
+- Ajouter un menu **?** ou **Aide**.
+- Ajouter une commande **Aide** ouvrant un fichier d’aide intégré.
+- Ajouter une commande **À propos** indiquant :
+  - le nom du logiciel;
+  - la version;
+  - la licence GNU GPLv3;
+  - les crédits;
+  - le lien du dépôt GitHub.
+- Créer une documentation d’aide dédiée, par exemple `docs/user/help.md`.
 
-## v0.5.0 — Expérience utilisateur
+### Critères de réalisation
 
-Objectif : rendre l’application plus agréable et plus sûre.
+- Les commandes du menu fonctionnent sans dupliquer la logique déjà présente dans l’interface.
+- Le nom et l’état modifié du projet sont toujours cohérents avec le fichier courant.
+- Le SoundFont choisi est restauré après redémarrage.
+- `Ctrl+Z` restaure réellement l’état précédent sans corrompre les listes d’accords ou d’arpégiateurs.
 
-- Prévisualisation de la séquence avant génération.
-- Bouton de lecture rapide du WAV généré.
+---
+
+## Priorité 2 — v0.6.0 : édition et organisation de la séquence musicale
+
+**Objectif :** permettre de construire et réorganiser rapidement une séquence sans ressaisir son contenu.
+
+### 1. Dupliquer une ligne
+
+- Ajouter une commande **Dupliquer la ligne**.
+- Copier l’intégralité du contenu de la ligne :
+  - BPM;
+  - signature rythmique;
+  - nombre de mesures;
+  - état du click track;
+  - mode d’accord;
+  - accords par ligne, par mesure ou par grille;
+  - instrument;
+  - réglages d’arpégiateur;
+  - futurs réglages de strum.
+- Insérer la copie immédiatement sous la ligne d’origine.
+- Créer une copie indépendante : modifier la copie ne doit pas modifier l’original.
+- Rendre l’action compatible avec **Annuler**.
+
+### 2. Réordonner les lignes
+
+- Ajouter à droite de chaque ligne des commandes permettant de la déplacer.
+- Première implémentation recommandée :
+  - bouton **Monter**;
+  - bouton **Descendre**.
+- Une évolution ultérieure pourra ajouter le glisser-déposer.
+- Déplacer la ligne avec tout son contenu, sans désynchroniser les accords ou les réglages d’arpégiateur.
+- Mettre à jour l’ordre sauvegardé dans le fichier `.gen`.
+- Rendre chaque déplacement compatible avec **Annuler**.
+
+### 3. Désactiver le click track
+
+- Ajouter une option permettant de désactiver le click track pour une ligne.
+- Lorsque le clic est désactivé :
+  - la ligne demeure dans la séquence;
+  - les accords, arpèges ou strums peuvent continuer à être générés;
+  - la durée et la structure de la ligne demeurent inchangées;
+  - aucune percussion de métronome n’est produite pour cette ligne.
+- Sauvegarder l’état dans le format `.gen`.
+- Afficher clairement l’état désactivé dans l’interface.
+- Prévoir éventuellement une commande globale pour désactiver ou réactiver tous les clics.
+
+### Critères de réalisation
+
+- Une ligne complexe peut être dupliquée et déplacée sans perte d’information.
+- L’ordre affiché correspond exactement à l’ordre exporté.
+- La désactivation du clic ne modifie pas la durée des accords ni la carte de tempo.
+- Toutes ces opérations participent à l’historique `Ctrl+Z`.
+
+---
+
+## Priorité 3 — v0.7.0 : contrôles harmoniques globaux et moteur de strumming
+
+**Objectif :** séparer clairement le choix de l’instrument du mode d’interprétation et permettre l’application rapide de réglages à une ligne entière.
+
+### 1. Arpégiateur applicable à toute la ligne
+
+Pour chacun des modes d’accord :
+
+- accord pour toute la ligne;
+- accord au début de chaque mesure;
+- grille d’accords selon une subdivision rythmique;
+
+ajouter un bouton ou une commande permettant d’appliquer un même réglage d’arpégiateur à tous les accords de la ligne.
+
+Le dialogue devra permettre de choisir :
+
+- activation ou désactivation globale;
+- motif;
+- nombre d’octaves;
+- figure rythmique;
+- valeur pointée;
+- N-olet;
+- portée de l’application :
+  - tous les accords;
+  - seulement les accords sans réglage personnalisé;
+  - seulement les cases sélectionnées, si une sélection multiple est ajoutée.
+
+Les réglages propres à chaque case doivent rester modifiables après l’application globale.
+
+### 2. Bouton **S** et patterns de strum
+
+- Ajouter un bouton **S** sous chaque champ d’accord, à côté du bouton **A**.
+- Permettre de choisir entre trois modes d’interprétation mutuellement exclusifs :
+  - accord plaqué;
+  - arpégiateur;
+  - pattern de strum.
+- Créer un éditeur de patterns de strum pour guitare, incluant progressivement :
+  - coup vers le bas;
+  - coup vers le haut;
+  - silence;
+  - coup étouffé ou percussif;
+  - accent;
+  - prolongation;
+  - répétition du pattern.
+- Permettre de choisir la valeur rythmique du pattern.
+- Prévoir une représentation compacte, par exemple :
+
+```text
+D - D U - U D U
+```
+
+où `D` signifie *downstroke*, `U` *upstroke* et `-` une absence d’attaque.
+
+### 3. Séparer l’instrument de l’articulation
+
+- Retirer l’hypothèse selon laquelle choisir **Guitare sèche** implique automatiquement un accord strummé.
+- Séparer explicitement :
+  - **instrument** : piano, cordes, guitare sèche, etc.;
+  - **interprétation** : accord plaqué, arpège ou strum.
+- Permettre à une guitare sèche de jouer :
+  - un accord plaqué;
+  - un arpège;
+  - un pattern de strum.
+- Permettre éventuellement à d’autres instruments d’utiliser les modes compatibles.
+
+### 4. Sauvegarde et génération
+
+- Étendre le format `.gen` avec des réglages de strum explicites et rétrocompatibles.
+- Générer les attaques MIDI correspondant au sens et au rythme des coups.
+- Adapter la sortie LilyPond afin de représenter le rythme de strum de façon compréhensible.
+- Documenter les limites liées aux SoundFonts, qui ne distinguent pas toujours les coups vers le haut et vers le bas.
+
+### Critères de réalisation
+
+- Un réglage d’arpégiateur peut être propagé à toute une ligne sans éditer chaque case.
+- Le bouton **S** n’active pas simultanément l’arpégiateur.
+- Le choix **Guitare sèche** n’impose plus automatiquement une articulation.
+- Les anciens projets restent lisibles avec un mode d’interprétation par défaut cohérent.
+
+---
+
+## Priorité 4 — v0.8.0 : prévisualisation et expérience audio
+
+**Objectif :** faciliter la vérification du résultat sans quitter l’application.
+
+- Prévisualisation de la séquence avant export.
+- Lecture rapide du WAV généré.
+- Contrôles lecture, pause et arrêt.
 - Barre de progression pendant les appels externes.
-- Journal détaillé des commandes exécutées.
-- Préférences utilisateur persistantes.
-- Détection automatique de SoundFonts courants.
-- Meilleure validation en temps réel des champs.
-- Panneau de configuration pour les chemins de LilyPond, FluidSynth, TiMidity et SoundFont.
+- Affichage amélioré du journal de génération.
+- Validation en temps réel des accords et des paramètres rythmiques.
+- Détection automatique des SoundFonts courants.
+- Diagnostic plus précis des fichiers WAV silencieux ou trop faibles.
 
-## v0.6.0 — Architecture audio avancée
+---
 
-Objectif : améliorer la production audio.
+## Priorité 5 — v0.9.0 : audio avancé et formats d’export
 
-- Choix du moteur audio : FluidSynth, TiMidity, autre backend.
+**Objectif :** améliorer la qualité et l’interopérabilité des fichiers produits.
+
+- Sélection explicite du moteur audio : TiMidity, FluidSynth ou autre backend.
 - Choix de la fréquence d’échantillonnage.
-- Choix du format de sortie : WAV, FLAC, AIFF, MP3 via outil externe optionnel.
-- Normalisation du volume.
-- Génération stéréo ou mono.
-- Export séparé par segment.
+- Sortie mono ou stéréo.
+- Normalisation et contrôle du niveau.
+- Export WAV, FLAC et AIFF.
+- Export MP3 via un outil externe optionnel.
+- Export séparé par ligne ou par famille d’instruments.
+- Export MusicXML.
+- Export de marqueurs ou de cartes de tempo pour les DAW.
 
-## v0.7.0 — Édition avancée de projet
-
-Objectif : permettre une écriture plus proche d’une structure de pièce.
-
-- Nommer les segments : intro, couplet, pont, solo, outro.
-- Copier/coller des rangées.
-- Réordonner les rangées par glisser-déposer.
-- Templates de structures courantes.
-- Import/export CSV.
-- Support des commentaires dans le projet.
+---
 
 ## v1.0.0 — Version stable
 
-Objectif : stabiliser l’API interne, le format `.gen` et l’expérience utilisateur.
+**Objectif :** stabiliser le format de projet, l’expérience utilisateur et la distribution.
 
 - Format `.gen` documenté et versionné.
-- Suite de tests automatisés.
-- Documentation utilisateur complète.
+- Migrations automatiques entre versions du format.
+- Suite complète de tests automatisés.
+- Documentation utilisateur et fichier d’aide complets.
 - Paquets d’installation pour Windows, macOS et Linux.
 - Publication officielle des binaires.
-- Licence, contribution et gouvernance clarifiées.
+- Processus de publication reproductible.
+- Licence, contribution et gouvernance maintenues à jour.
 
-## Idées futures
+---
 
-- Export MusicXML.
-- Export Reaper / DAW markers.
-- Export Ableton tempo map.
+# Jalons réalisés
+
+## v0.1.x — Socle fonctionnel
+
+- Interface CustomTkinter.
+- Segments dynamiques avec tempo, signature et nombre de mesures.
+- Pipeline LilyPond, MIDI et WAV.
+- Sauvegarde et chargement `.gen`.
+- Journal des commandes et diagnostic WAV.
+- Accords symboliques et instruments harmoniques.
+
+## v0.2.0 — Accords par mesure et logique `addX`
+
+- Accord distinct pour chaque mesure.
+- Durée d’accord adaptée à la signature.
+- Affichage des symboles au-dessus de la partition.
+- Interprétation générique des accords `addX`.
+- Compatibilité ascendante du format `.gen`.
+
+## v0.3.0 — Grille rythmique d’accords
+
+- Changements d’accords à l’intérieur des mesures.
+- Calcul exact des cases par subdivision.
+- Virgule pour prolonger un accord sans nouvelle attaque.
+- Silences par case vide.
+- Accords complexes avec altérations parenthésées.
+
+## v0.4.x — Arpégiateur et stabilisation du parseur
+
+- Arpégiateur configurable par accord.
+- Motifs ascendants, descendants et aléatoires.
+- Octaves, valeurs pointées et N-olets.
+- Correction de la durée totale des groupes N-olets.
+- Tolérance de notations comme `C5m`.
+- Tests de non-régression pour les progressions complexes.
+
+---
+
+# Idées à plus long terme
+
+- Nommer les segments : intro, couplet, pont, solo, outro.
+- Modèles de structures musicales.
+- Import et export CSV.
+- Commentaires associés aux lignes.
 - Mode ligne de commande sans interface graphique.
 - Bibliothèque Python réutilisable indépendamment de la GUI.
 - Synchronisation avec des pistes audio existantes.
-- Génération de click tracks polymétriques.
-- Support de claves, patterns latins et ostinatos de percussion.
-- Internationalisation français / anglais.
+- Click tracks polymétriques.
+- Claves, patterns latins et ostinatos de percussion.
+- Internationalisation français et anglais.

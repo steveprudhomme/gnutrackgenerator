@@ -91,5 +91,28 @@ class ParenthesizedChordModifierTests(unittest.TestCase):
         self.assertEqual(quality.degrees, ("1", "b3", "b5", "b7"))
 
 
+
+
+class TolerantPowerChordNotationTests(unittest.TestCase):
+    def test_five_then_minor_is_normalized_to_minor_triad(self) -> None:
+        self.assertEqual(chord_symbol_to_lilypond_chord("C5m"), "<c ees g>")
+
+    def test_minor_then_five_is_also_accepted(self) -> None:
+        self.assertEqual(chord_symbol_to_lilypond_chord("Cm5"), "<c ees g>")
+
+    def test_redundant_fifth_alias_preserves_following_extension(self) -> None:
+        self.assertEqual(
+            chord_symbol_to_lilypond_chord("C5m7"),
+            chord_symbol_to_lilypond_chord("Cm7"),
+        )
+
+    def test_reported_progression_is_fully_supported(self) -> None:
+        progression = ["E5", "B5", "E5", "C5m", "F#5(b5)", "B5"]
+        converted = [chord_symbol_to_lilypond_chord(symbol) for symbol in progression]
+        self.assertEqual(
+            converted,
+            ["<e b>", "<b fis'>", "<e b>", "<c ees g>", "<fis c'>", "<b fis'>"],
+        )
+
 if __name__ == "__main__":
     unittest.main()

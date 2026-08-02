@@ -8,11 +8,19 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 
 ### Ajouté
 
-- Rien pour le moment.
+- Ajout d’une feuille de route priorisée pour les prochaines évolutions de l’interface, de l’édition de séquence et de l’interprétation harmonique.
+- Planification d’un historique d’édition avec **Annuler** (`Ctrl+Z`) et, lorsque possible, **Rétablir** (`Ctrl+Y` ou `Ctrl+Maj+Z`).
+- Planification d’un menu **Fichier** regroupant **Enregistrer**, **Enregistrer sous**, **Ouvrir** et **Exporter**.
+- Planification d’un menu **Édition → Options** avec persistance du SoundFont et des préférences utilisateur entre les sessions.
+- Planification d’un menu **?** contenant l’aide intégrée et les informations sur l’application.
+- Planification de la duplication complète des lignes, de leur réordonnancement et de la désactivation du click track par ligne.
+- Planification d’un réglage d’arpégiateur applicable à l’ensemble d’une ligne, dans chacun des modes d’accord.
+- Planification d’un moteur de strumming accessible par un bouton **S**, distinct du choix de l’instrument.
 
 ### Changé
 
-- Rien pour le moment.
+- Réorganisation de `ROADMAP.md` selon les dépendances techniques et l’ordre de priorité proposé pour les versions `0.5.0`, `0.6.0` et `0.7.0`.
+- Clarification de la séparation future entre l’instrument choisi et le mode d’interprétation de l’accord : accord plaqué, arpège ou pattern de strum.
 
 ### Déprécié
 
@@ -29,6 +37,32 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 ### Sécurité
 
 - Rien pour le moment.
+## [0.4.2] - 2026-08-02
+
+### Changé
+
+- Le parseur tolère maintenant les notations redondantes `C5m` et `Cm5`, interprétées comme un accord mineur complet.
+- Les extensions suivant cette écriture sont conservées, par exemple `C5m7` est interprété comme `Cm7`.
+- Passage de la version du projet à `0.4.2`.
+
+### Corrigé
+
+- La progression `E5 B5 E5 C5m F#5(b5) B5` peut maintenant être générée sans rejet de `C5m`.
+- Ajout de tests de non-régression pour les accords de quinte, les accords mineurs à quinte explicite et les quintes diminuées parenthésées.
+
+## [0.4.1] - 2026-08-01
+
+### Changé
+
+- La figure rythmique sélectionnée représente maintenant la durée totale du groupe lorsque le champ N-olet contient une valeur de 3 à 32.
+- Le moteur choisit automatiquement une unité écrite et un rapport LilyPond adaptés afin de produire exactement N attaques dans la durée demandée.
+- Passage de la version du projet à `0.4.1`.
+
+### Corrigé
+
+- Correction de la mécanique des N-olets de l’arpégiateur : `Ronde + 7` génère désormais exactement sept notes réparties dans une ronde.
+- Correction du calcul des rapports usuels, notamment `3/2`, `5/4`, `7/4` et `9/8`, selon la durée totale du groupe.
+- Correction des groupes successifs et du dernier groupe raccourci afin de conserver exactement N attaques sans dépasser la durée de l’accord.
 
 ## [0.4.0] - 2026-08-01
 
@@ -39,14 +73,13 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 - Motifs d’arpège montant-descendant, descendant-montant et aléatoire reproductible.
 - Choix de 1 à 8 octaves.
 - Valeurs rythmiques : double croche, croche, noire, blanche et ronde, avec option pointée.
-- N-olets génériques configurables de 3 à 32, selon la convention N notes dans le temps de N−1.
+- N-olets génériques configurables de 3 à 32.
 - Module `arpeggiator.py` et sérialisation `.gen` des réglages par accord.
 - Tests unitaires pour les motifs, durées, N-olets, sauvegardes et sortie LilyPond.
 
 ### Changé
 
 - La portée harmonique peut maintenant contenir de véritables notes arpégées plutôt qu’un accord vertical.
-- Les N-olets sont produits avec la syntaxe LilyPond `\tuplet N/(N-1)`.
 - Une virgule dans la grille conserve les réglages d’arpégiateur de l’accord prolongé.
 - Passage de la version du projet à `0.4.0`.
 

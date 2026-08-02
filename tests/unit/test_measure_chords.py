@@ -89,6 +89,27 @@ class MeasureChordLilyPondTests(unittest.TestCase):
         self.assertIn('s1^\\markup { \\bold "Dadd11" }', source)
         self.assertIn("<d fis a g'>1", source)
 
+    def test_reported_power_chord_progression_generates_successfully(self) -> None:
+        project = ProjectData(
+            [
+                Segment(
+                    120,
+                    4,
+                    4,
+                    6,
+                    chord_mode=CHORD_MODE_MEASURE,
+                    measure_chords=("E5", "B5", "E5", "C5m", "F#5(b5)", "B5"),
+                )
+            ]
+        )
+        source = build_lilypond_source(project, title="progression-puissance")
+
+        self.assertIn('<e b>1', source)
+        self.assertIn("<b fis'>1", source)
+        self.assertIn('<c ees g>1', source)
+        self.assertIn("<fis c'>1", source)
+        self.assertIn('s1^\\markup { \\bold "C5m" }', source)
+
     def test_blank_measure_chord_generates_a_full_measure_rest(self) -> None:
         project = ProjectData(
             [

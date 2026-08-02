@@ -41,7 +41,7 @@ GNU TrackGenerator génère des pistes de métronome programmables et reproducti
 - `REQ-026` — Les motifs disponibles sont descendant-montant, montant-descendant et aléatoire.
 - `REQ-027` — L’utilisateur peut choisir de 1 à 8 octaves.
 - `REQ-028` — Les valeurs disponibles sont double croche, croche, noire, blanche et ronde, avec une option pointée.
-- `REQ-029` — Un N-olet est saisi par un nombre N de 3 à 32 et signifie N notes dans le temps de N−1.
+- `REQ-029` — Un N-olet est saisi par un nombre N de 3 à 32. La valeur rythmique sélectionnée représente la durée totale du groupe, dans laquelle exactement N notes sont réparties. Lorsque N vaut `0`, la valeur sélectionnée représente la durée de chaque note.
 - `REQ-030` — Le motif aléatoire est reproductible pour une même sauvegarde.
 - `REQ-031` — Une virgule de continuation conserve l’arpégiateur de l’accord précédent.
 
@@ -51,9 +51,12 @@ Le parseur prend en charge une logique générique `addX`. Le suffixe peut être
 
 Le parseur prend aussi en charge les modifications parenthésées appliquées à une qualité reconnue, par exemple `G#m7(b13)`, `C7(#9)` ou `C7(b9,#11)`. Plusieurs modifications peuvent être séparées par des virgules. Lorsqu’un degré altéré existe déjà sous une autre forme dans l’accord de base, il est remplacé.
 
+Pour tolérer certaines écritures non standard rencontrées dans des progressions importées, `C5m` et `Cm5` sont interprétés comme `Cm`. La quinte explicite est considérée redondante, tandis que le symbole original reste conservé pour l’affichage.
+
 | Notation | Degrés |
 |---|---|
 | `C5` | `1, 5` |
+| `C5m`, `Cm5` | `1, b3, 5` |
 | `C(b5)` | `1, b5` |
 | `C` | `1, 3, 5` |
 | `Cm` | `1, b3, 5` |
@@ -100,7 +103,7 @@ Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, 
 ```json
 {
   "app": "GNU TrackGenerator",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "soundfont_path": null,
   "segments": [
     {
@@ -148,6 +151,7 @@ Exemple du mode rythmique :
 ## Critères d’acceptation
 
 - Un accord `C7#9` est converti en `<c e g bes ees'>`.
+- La progression `E5 B5 E5 C5m F#5(b5) B5` est entièrement acceptée; `C5m` est interprété comme `Cm`.
 - Une ligne en `7/8` avec accord produit des accords de durée `1*7/8`.
 - Une ligne en Guitare sèche produit un accord avec `\arpeggio`.
 - Une ligne de quatre mesures en mode par mesure sauvegarde exactement quatre entrées dans `measure_chords`.

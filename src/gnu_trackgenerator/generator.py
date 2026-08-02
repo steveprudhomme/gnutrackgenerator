@@ -385,11 +385,12 @@ def _render_arpeggio_event(
 
     tokens: list[str] = []
     tuplet_count = settings.normalized_tuplet_count
-    scale = Fraction(tuplet_count - 1, tuplet_count) if tuplet_count else Fraction(1, 1)
+    tuplet_normal_count = settings.tuplet_normal_count
+    scale = settings.tuplet_scale
 
     for step in steps:
         if step.starts_tuplet:
-            tokens.append(f"\\tuplet {tuplet_count}/{tuplet_count - 1} {{")
+            tokens.append(f"\\tuplet {tuplet_count}/{tuplet_normal_count} {{")
 
         remaining = step.actual_duration
         first_piece = True

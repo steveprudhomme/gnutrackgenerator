@@ -228,8 +228,15 @@ _STANDARD_LILYPOND_DURATIONS: dict[Fraction, str] = {
     Fraction(1, 3): "2*2/3",
     Fraction(1, 4): "4",
     Fraction(1, 6): "4*2/3",
+    Fraction(3, 16): "8.",
     Fraction(1, 8): "8",
+    Fraction(3, 32): "16.",
     Fraction(1, 12): "8*2/3",
+    Fraction(1, 16): "16",
+    Fraction(3, 64): "32.",
+    Fraction(1, 32): "32",
+    Fraction(3, 128): "64.",
+    Fraction(1, 64): "64",
 }
 
 

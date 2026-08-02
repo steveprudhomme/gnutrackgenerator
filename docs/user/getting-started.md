@@ -174,7 +174,7 @@ Sous chaque champ d’accord se trouve un bouton **A**. `A✓` indique que l’a
 3. Activer l’arpégiateur.
 4. Choisir le mouvement, le nombre d’octaves et la valeur rythmique.
 5. Activer au besoin la valeur pointée.
-6. Saisir `0` pour aucun N-olet, ou un nombre de `3` à `32`.
+6. Saisir `0` pour que la valeur soit la durée de chaque note, ou un nombre de `3` à `32` pour répartir exactement ce nombre de notes dans la durée totale choisie.
 7. Cliquer sur **Enregistrer**.
 
 Les trois mouvements disponibles sont :
@@ -183,7 +183,7 @@ Les trois mouvements disponibles sont :
 - monter puis redescendre;
 - jouer les notes au hasard.
 
-Le motif aléatoire est reproductible. Un N-olet `5` signifie cinq notes dans le temps de quatre. Dans une grille, une virgule prolonge l’accord précédent et conserve son arpégiateur; le bouton A de la case contenant la virgule n’est donc pas utilisé.
+Le motif aléatoire est reproductible. Avec **Ronde + 7**, l’arpégiateur génère exactement sept notes pendant une ronde; avec **Noire + 5**, il génère exactement cinq notes pendant une noire. Dans une grille, une virgule prolonge l’accord précédent et conserve son arpégiateur; le bouton A de la case contenant la virgule n’est donc pas utilisé.
 
 ## Vérifier TiMidity
 

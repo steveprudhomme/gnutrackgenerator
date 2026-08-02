@@ -30,13 +30,27 @@ class ArpeggiatorSettingsTests(unittest.TestCase):
         settings = ArpeggiatorSettings(enabled=True, rhythm=ARP_RHYTHM_QUARTER, dotted=True)
         self.assertEqual(settings.step_duration, Fraction(3, 8))
 
-    def test_five_tuplet_uses_five_in_the_time_of_four(self):
+    def test_five_tuplet_fills_the_selected_eighth_note(self):
         settings = ArpeggiatorSettings(
             enabled=True,
             rhythm=ARP_RHYTHM_EIGHTH,
             tuplet_count=5,
         )
-        self.assertEqual(settings.step_duration, Fraction(1, 10))
+        self.assertEqual(settings.tuplet_normal_count, 4)
+        self.assertEqual(settings.step_duration, Fraction(1, 40))
+        self.assertEqual(settings.written_note_duration, Fraction(1, 32))
+
+    def test_whole_note_septuplet_means_seven_notes_in_one_whole(self):
+        from gnu_trackgenerator.arpeggiator import ARP_RHYTHM_WHOLE
+
+        settings = ArpeggiatorSettings(
+            enabled=True,
+            rhythm=ARP_RHYTHM_WHOLE,
+            tuplet_count=7,
+        )
+        self.assertEqual(settings.tuplet_normal_count, 4)
+        self.assertEqual(settings.step_duration, Fraction(1, 7))
+        self.assertEqual(settings.written_note_duration, Fraction(1, 4))
 
     def test_round_trip(self):
         settings = ArpeggiatorSettings(
@@ -76,6 +90,51 @@ class ArpeggioSequenceTests(unittest.TestCase):
         )
         steps = generate_arpeggio_steps("C", Fraction(5, 8), settings)
         self.assertEqual([step.note for step in steps], ["g", "e", "c", "e", "g"])
+
+    def test_whole_note_septuplet_generates_exactly_seven_attacks(self):
+        from gnu_trackgenerator.arpeggiator import ARP_RHYTHM_WHOLE
+
+        settings = ArpeggiatorSettings(
+            enabled=True,
+            pattern=ARP_PATTERN_UP_DOWN,
+            octaves=1,
+            rhythm=ARP_RHYTHM_WHOLE,
+            tuplet_count=7,
+        )
+        steps = generate_arpeggio_steps("C", Fraction(1, 1), settings)
+        self.assertEqual(len(steps), 7)
+        self.assertTrue(steps[0].starts_tuplet)
+        self.assertTrue(steps[-1].ends_tuplet)
+        self.assertTrue(all(step.actual_duration == Fraction(1, 7) for step in steps))
+        self.assertTrue(all(step.written_duration == Fraction(1, 4) for step in steps))
+        self.assertEqual(sum((step.actual_duration for step in steps), Fraction()), Fraction(1, 1))
+
+    def test_short_final_group_still_contains_exactly_seven_attacks(self):
+        from gnu_trackgenerator.arpeggiator import ARP_RHYTHM_WHOLE
+
+        settings = ArpeggiatorSettings(
+            enabled=True,
+            rhythm=ARP_RHYTHM_WHOLE,
+            tuplet_count=7,
+        )
+        steps = generate_arpeggio_steps("C", Fraction(3, 4), settings)
+        self.assertEqual(len(steps), 7)
+        self.assertTrue(all(step.actual_duration == Fraction(3, 28) for step in steps))
+        self.assertTrue(all(step.written_duration == Fraction(3, 16) for step in steps))
+        self.assertEqual(sum((step.actual_duration for step in steps), Fraction()), Fraction(3, 4))
+
+    def test_two_wholes_generate_two_septuplet_groups(self):
+        from gnu_trackgenerator.arpeggiator import ARP_RHYTHM_WHOLE
+
+        settings = ArpeggiatorSettings(
+            enabled=True,
+            rhythm=ARP_RHYTHM_WHOLE,
+            tuplet_count=7,
+        )
+        steps = generate_arpeggio_steps("C", Fraction(2, 1), settings)
+        self.assertEqual(len(steps), 14)
+        self.assertEqual(sum(step.starts_tuplet for step in steps), 2)
+        self.assertEqual(sum(step.ends_tuplet for step in steps), 2)
 
     def test_random_sequence_is_reproducible(self):
         settings = ArpeggiatorSettings(
@@ -152,9 +211,34 @@ class ArpeggiatorLilyPondTests(unittest.TestCase):
         )
         source = build_lilypond_source(ProjectData([segment]), "arp-test")
         self.assertIn(r"\tuplet 3/2 {", source)
-        self.assertIn("c8", source)
+        self.assertIn("c16", source)
         self.assertNotIn("<c e g b>1", source)
         self.assertIn(r'\bold "Cmaj7"', source)
+
+    def test_whole_note_septuplet_uses_seven_quarters_in_seven_over_four(self):
+        from gnu_trackgenerator.arpeggiator import ARP_RHYTHM_WHOLE
+
+        segment = Segment(
+            bpm=120,
+            numerator=4,
+            denominator=4,
+            measures=1,
+            chord_symbol="C",
+            chord_mode=CHORD_MODE_LINE,
+            chord_arpeggiator=ArpeggiatorSettings(
+                enabled=True,
+                pattern=ARP_PATTERN_UP_DOWN,
+                octaves=1,
+                rhythm=ARP_RHYTHM_WHOLE,
+                tuplet_count=7,
+            ),
+        )
+        source = build_lilypond_source(ProjectData([segment]), "septuplet-test")
+        self.assertIn(r"\tuplet 7/4 {", source)
+        tuplet_body = source.split(r"\tuplet 7/4 {", 1)[1].split("}", 1)[0]
+        note_tokens = [token for token in tuplet_body.split() if token and token[0] in "abcdefg"]
+        self.assertEqual(len(note_tokens), 7)
+        self.assertTrue(all("4" in token for token in note_tokens))
 
     def test_grid_arpeggiator_is_saved_and_rendered(self):
         enabled = ArpeggiatorSettings(enabled=True, rhythm=ARP_RHYTHM_QUARTER)

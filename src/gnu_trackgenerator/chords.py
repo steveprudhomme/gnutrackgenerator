@@ -60,6 +60,13 @@ PARENTHESIZED_MODIFIERS_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Tolerant aliases for non-standard but understandable chord spellings.
+# ``C5m`` is sometimes used by musicians to mean a C minor chord with the
+# perfect fifth explicitly mentioned.  A power chord itself has no major/minor
+# quality, so GNU TrackGenerator normalizes ``5m`` (and ``m5``) to ``m`` while
+# preserving the original symbol for display in the PDF.
+REDUNDANT_FIFTH_MINOR_RE = re.compile(r"^(?:5m|m5)(?P<rest>.*)$")
+
 # LilyPond's English note names.  The chosen spellings favor readability and
 # validity over perfect enharmonic spelling for every theoretical context.
 PITCH_CLASS_TO_LILYPOND: dict[int, str] = {
@@ -170,6 +177,7 @@ CHORD_SYMBOL_RE = re.compile(r"^\s*([A-Ga-g])([#b]?)(.*)\s*$")
 # Public list used by the GUI and documentation.
 SUPPORTED_CHORD_EXAMPLES: tuple[str, ...] = (
     "C5",
+    "C5m",
     "C(b5)",
     "C",
     "Cm",
@@ -282,15 +290,36 @@ def _extend_quality_with_degrees(
     )
 
 
+def canonicalize_chord_quality_suffix(suffix: str) -> str:
+    """Normalize tolerant aliases before resolving a chord quality.
+
+    The notation ``C5m`` is not a standard chord-symbol spelling because a
+    power chord (``C5``) contains no third and is therefore neither major nor
+    minor.  Still, the user's intention is unambiguous in this context: the
+    explicit fifth is redundant and the ``m`` requests a minor triad.  The
+    parser therefore treats ``5m`` and ``m5`` as aliases for ``m``.
+
+    Any remaining suffix is preserved, so ``C5m7`` becomes ``Cm7`` and
+    ``C5m(b5)`` becomes ``Cm(b5)``.
+    """
+    match = REDUNDANT_FIFTH_MINOR_RE.fullmatch(suffix)
+    if match:
+        return "m" + match.group("rest")
+    return suffix
+
+
 def resolve_chord_quality(suffix: str) -> ChordQuality:
     """Resolve explicit, ``addX`` and parenthesized chord constructions.
 
     Supported examples include ``add11``, ``madd9``, ``7add13``, ``add#11``,
-    ``D(add11)``, ``G#m7(b13)`` and multi-modifier forms such as
-    ``C7(b9,#11)``.  Parenthesized degrees are applied to a recognized base
+    ``D(add11)``, ``G#m7(b13)``, the tolerant alias ``C5m`` and
+    multi-modifier forms such as ``C7(b9,#11)``. Parenthesized degrees are
+    applied to a recognized base
     quality without requiring a dedicated hard-coded chord entry.
     """
-    normalized = suffix.replace("♭", "b").replace("♯", "#")
+    normalized = canonicalize_chord_quality_suffix(
+        suffix.replace("♭", "b").replace("♯", "#")
+    )
     if normalized in CHORD_QUALITIES:
         return CHORD_QUALITIES[normalized]
 

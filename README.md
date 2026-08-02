@@ -1,4 +1,4 @@
-![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.4.0-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
+![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.4.2-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
 
 # GNU TrackGenerator
 
@@ -198,7 +198,7 @@ fluidsynth --version
 Si une commande est introuvable, il faut ajouter le dossier contenant l’exécutable correspondant au `PATH` de Windows.
 
 
-## Fonctionnalités de la version 0.4.0
+## Fonctionnalités de la version 0.4.2
 
 - Génération de click tracks programmables par segments : BPM, signature rythmique et nombre de mesures.
 - Menu de ligne `☰` au bout de chaque rangée.
@@ -210,10 +210,11 @@ Si une commande est introuvable, il faut ajouter le dossier contenant l’exécu
 - Chaque champ d’accord possède un petit bouton **A** ouvrant ses réglages d’arpégiateur.
 - L’arpégiateur peut être activé ou désactivé indépendamment pour chaque accord.
 - Motifs disponibles : descendre puis remonter, monter puis redescendre et notes au hasard.
-- Choix de 1 à 8 octaves, des valeurs ronde à double croche, des valeurs pointées et des N-olets configurables par un nombre de 3 à 32.
+- Choix de 1 à 8 octaves, des valeurs ronde à double croche, des valeurs pointées et des N-olets configurables par un nombre de 3 à 32. Avec un N-olet, la valeur choisie représente la durée totale du groupe.
 - Saisie d’accords sous forme de symboles musicaux standard basés sur les notes A, B, C, D, E, F, G.
 - Conversion automatique des symboles d’accords en notes LilyPond.
 - Interprétation générique de la notation `addX`, par exemple `Dadd11`, `Cmadd9`, `C7add13`, `Fadd#11` ou `Bbaddb9`.
+- Tolérance pour la notation redondante `C5m` ou `Cm5`, interprétée comme `Cm`; le symbole original demeure affiché dans le PDF.
 - Instruments disponibles pour la portée d’accords : **Piano**, **Strings** et **Guitare sèche**.
 - Pour la **Guitare sèche**, les accords sont générés avec un rendu strummé/arpégé grâce à `\arpeggio`.
 - Affichage du symbole d’accord exact au-dessus de la partition PDF, au début de chaque mesure concernée.
@@ -288,11 +289,20 @@ Réglages disponibles :
 - **Activer l’arpégiateur** : désactivé, l’accord est joué normalement; activé, les notes sont jouées séparément.
 - **Mouvement** : descendre puis remonter, monter puis redescendre ou notes au hasard.
 - **Octaves** : de 1 à 8 octaves.
-- **Valeur de note** : double croche, croche, noire, blanche ou ronde.
+- **Valeur rythmique** : double croche, croche, noire, blanche ou ronde.
 - **Valeur pointée** : applique le point à la valeur choisie.
-- **N-olet** : `0` désactive cette fonction; `3`, `4`, `5`, etc. génèrent respectivement des rapports `3:2`, `4:3`, `5:4`, etc.
+- **N-olet** : `0` désactive cette fonction; la valeur rythmique est alors la durée de chaque note de l’arpège. Avec `N` entre 3 et 32, la valeur rythmique devient la durée totale d’un groupe contenant exactement N notes.
 
-Le motif aléatoire est reproductible : la même sauvegarde génère la même séquence. Dans la grille rythmique, une virgule prolonge l’accord précédent avec son arpégiateur sans provoquer une nouvelle attaque. La dernière note est raccourcie automatiquement lorsque la durée disponible ne contient pas un nombre entier de pas d’arpège.
+Le motif aléatoire est reproductible : la même sauvegarde génère la même séquence. Dans la grille rythmique, une virgule prolonge l’accord précédent avec son arpégiateur sans provoquer une nouvelle attaque.
+
+Exemples de N-olets :
+
+- **Ronde + 7** : sept notes réparties dans une ronde, générées sous la forme LilyPond `\tuplet 7/4` avec sept noires;
+- **Blanche + 5** : cinq notes réparties dans une blanche, avec un rapport `5/4`;
+- **Noire + 3** : trois notes réparties dans une noire, avec un rapport `3/2`;
+- **Croche + 0** : aucune mécanique de N-olet; chaque note de l’arpège dure une croche.
+
+Lorsque la durée d’un accord ne contient pas un nombre entier de groupes complets, un dernier groupe raccourci conserve exactement N attaques et se termine à la frontière de l’accord.
 
 Exemple de sauvegarde `.gen` pour un accord par ligne :
 

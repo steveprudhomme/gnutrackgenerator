@@ -113,7 +113,7 @@ class ArpeggiatorDialog(ctk.CTkToplevel):
             row=3, column=1, padx=20, pady=8, sticky="w"
         )
 
-        ctk.CTkLabel(self, text="Valeur de note").grid(
+        ctk.CTkLabel(self, text="Valeur rythmique").grid(
             row=4, column=0, padx=20, pady=8, sticky="w"
         )
         ctk.CTkOptionMenu(
@@ -137,9 +137,10 @@ class ArpeggiatorDialog(ctk.CTkToplevel):
         ctk.CTkLabel(
             self,
             text=(
-                "N-olet : 0 désactive le N-olet. Un nombre N ≥ 3 produit N notes "
-                "dans le temps de N−1 notes (3:2, 4:3, 5:4, etc.). "
-                "Le motif aléatoire reste reproductible lors d’une nouvelle génération."
+                "N-olet : 0 désactive le N-olet; la valeur choisie est alors la durée de chaque note. "
+                "Avec N ≥ 3, la valeur rythmique devient la durée totale du groupe et exactement N notes "
+                "sont réparties dans cette durée. Exemple : Ronde + 7 = sept notes dans une ronde "
+                "(LilyPond : 7/4). Le motif aléatoire reste reproductible."
             ),
             wraplength=470,
             justify="left",

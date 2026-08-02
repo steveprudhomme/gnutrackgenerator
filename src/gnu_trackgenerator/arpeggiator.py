@@ -3,7 +3,7 @@
 
 """Arpeggiator settings and deterministic note-sequence generation.
 
-The module is intentionally independent from the GUI.  It converts one chord
+The module is intentionally independent from the GUI. It converts one chord
 symbol and one arpeggiator configuration into timed single-note events that can
 be rendered by LilyPond and MIDI.
 """
@@ -65,13 +65,30 @@ class ArpeggiatorError(ValueError):
     """Raised when an arpeggiator setting or sequence is invalid."""
 
 
+def _greatest_power_of_two_not_exceeding(value: int) -> int:
+    """Return the conventional binary note count used by a tuplet ratio.
+
+    Examples: 3 -> 2, 5 -> 4, 7 -> 4, 9 -> 8. This produces conventional
+    LilyPond ratios such as 3/2, 5/4, 7/4 and 9/8 while preserving the user's
+    requested total duration for the complete group.
+    """
+    if value < 1:
+        raise ValueError("La valeur doit être positive.")
+    return 1 << (value.bit_length() - 1)
+
+
 @dataclass(frozen=True)
 class ArpeggiatorSettings:
     """Configuration attached to one chord-entry field.
 
-    ``tuplet_count`` uses a single-number convention requested by the UI:
-    ``N`` means N notes in the time normally occupied by N-1 notes.  Therefore
-    3 gives a triplet (3:2), 4 a quadruplet (4:3), and so on.
+    When ``tuplet_count`` is zero, ``rhythm`` is the duration of each generated
+    arpeggio note, as in earlier project versions.
+
+    When ``tuplet_count`` is ``N`` (3 to 32), ``rhythm`` is instead the total
+    duration of one complete N-olet group. The engine generates exactly ``N``
+    attacks inside that duration. For example, ``rhythm='whole'`` and
+    ``tuplet_count=7`` creates seven notes spanning one whole note, represented
+    conventionally as ``\\tuplet 7/4`` with seven written quarter notes.
     """
 
     enabled: bool = False
@@ -102,8 +119,8 @@ class ArpeggiatorSettings:
         return self.tuplet_count
 
     @property
-    def written_note_duration(self) -> Fraction:
-        """Return the notated note value before tuplet scaling."""
+    def selected_rhythm_duration(self) -> Fraction:
+        """Return the duration selected in the UI, including a possible dot."""
         self.validate()
         duration = ARP_RHYTHM_DURATIONS[self.rhythm]
         if self.dotted:
@@ -111,13 +128,51 @@ class ArpeggiatorSettings:
         return duration
 
     @property
-    def step_duration(self) -> Fraction:
-        """Return the audible duration of one generated arpeggio note."""
-        duration = self.written_note_duration
+    def tuplet_normal_count(self) -> int:
+        """Return the denominator of the conventional LilyPond tuplet ratio.
+
+        For example, 7 notes use a 7/4 ratio, while 9 notes use a 9/8 ratio.
+        Zero means that N-olet mode is disabled.
+        """
         count = self.normalized_tuplet_count
-        if count:
-            duration *= Fraction(count - 1, count)
-        return duration
+        if not count:
+            return 0
+        return _greatest_power_of_two_not_exceeding(count)
+
+    @property
+    def tuplet_scale(self) -> Fraction:
+        """Return actual-duration / written-duration for one tuplet note."""
+        count = self.normalized_tuplet_count
+        if not count:
+            return Fraction(1, 1)
+        return Fraction(self.tuplet_normal_count, count)
+
+    @property
+    def written_note_duration(self) -> Fraction:
+        """Return the notated duration of each generated arpeggio note.
+
+        Outside N-olet mode, this is simply the selected note value. In N-olet
+        mode, the selected value is the whole group duration and is divided by
+        the conventional binary count. A whole-note septuplet therefore writes
+        seven quarter notes under ``\\tuplet 7/4``.
+        """
+        count = self.normalized_tuplet_count
+        if not count:
+            return self.selected_rhythm_duration
+        return self.selected_rhythm_duration / self.tuplet_normal_count
+
+    @property
+    def step_duration(self) -> Fraction:
+        """Return the audible duration of one generated arpeggio note.
+
+        With N-olet mode enabled, exactly N equal attacks fill the selected
+        rhythmic duration. Thus a whole-note septuplet has a step duration of
+        1/7 of a whole note.
+        """
+        count = self.normalized_tuplet_count
+        if not count:
+            return self.selected_rhythm_duration
+        return self.selected_rhythm_duration / count
 
     def to_dict(self) -> dict[str, Any]:
         self.validate()
@@ -185,7 +240,15 @@ def generate_arpeggio_steps(
     *,
     seed_key: str = "",
 ) -> tuple[ArpeggioStep, ...]:
-    """Generate enough notes to fill ``duration`` exactly.
+    """Generate notes that fill ``duration`` exactly.
+
+    Without N-olet mode, notes use the selected value until the event ends and
+    the final note may be shortened.
+
+    With N-olet mode, each complete group spans the selected rhythmic duration
+    and contains exactly N attacks. If an event ends before a complete selected
+    group can fit, a final shortened group still contains exactly N equally
+    spaced attacks so the chord ends precisely at its timeline boundary.
 
     Random patterns are deterministic for the same chord, settings and seed key,
     which keeps repeated project generation reproducible.
@@ -208,55 +271,67 @@ def generate_arpeggio_steps(
         )
     )
 
-    nominal_actual = settings.step_duration
-    scale = Fraction(1, 1)
-    tuplet_count = settings.normalized_tuplet_count
-    if tuplet_count:
-        scale = Fraction(tuplet_count - 1, tuplet_count)
-
     steps: list[ArpeggioStep] = []
-    remaining = duration
-    index = 0
     previous_pitch: int | None = None
+    sequence_index = 0
 
-    while remaining > 0:
-        if len(steps) >= MAX_ARPEGGIO_STEPS:
-            raise ArpeggiatorError(
-                f"L'arpège dépasserait la limite de {MAX_ARPEGGIO_STEPS} notes. "
-                "Choisissez une valeur rythmique plus grande ou réduisez la durée."
-            )
-
+    def next_pitch() -> int:
+        nonlocal previous_pitch, sequence_index
         if settings.pattern == ARP_PATTERN_RANDOM:
             pitch = rng.choice(pitches)
             if len(pitches) > 1 and pitch == previous_pitch:
                 alternatives = [candidate for candidate in pitches if candidate != previous_pitch]
                 pitch = rng.choice(alternatives)
         else:
-            pitch = cycle[index % len(cycle)]
-
-        actual = min(nominal_actual, remaining)
-        written = actual / scale
-        group_position = index % tuplet_count if tuplet_count else 0
-        starts_tuplet = bool(tuplet_count and group_position == 0)
-        # Close the group after N notes, or after the final shortened group.
-        ends_tuplet = bool(
-            tuplet_count
-            and (
-                group_position == tuplet_count - 1
-                or actual == remaining
-            )
-        )
-        steps.append(
-            ArpeggioStep(
-                note=pitch_semitone_to_lilypond(pitch),
-                actual_duration=actual,
-                written_duration=written,
-                starts_tuplet=starts_tuplet,
-                ends_tuplet=ends_tuplet,
-            )
-        )
-        remaining -= actual
+            pitch = cycle[sequence_index % len(cycle)]
         previous_pitch = pitch
-        index += 1
+        sequence_index += 1
+        return pitch
+
+    tuplet_count = settings.normalized_tuplet_count
+    if not tuplet_count:
+        remaining = duration
+        while remaining > 0:
+            if len(steps) >= MAX_ARPEGGIO_STEPS:
+                raise ArpeggiatorError(
+                    f"L'arpège dépasserait la limite de {MAX_ARPEGGIO_STEPS} notes. "
+                    "Choisissez une valeur rythmique plus grande ou réduisez la durée."
+                )
+            actual = min(settings.step_duration, remaining)
+            steps.append(
+                ArpeggioStep(
+                    note=pitch_semitone_to_lilypond(next_pitch()),
+                    actual_duration=actual,
+                    written_duration=actual,
+                )
+            )
+            remaining -= actual
+        return tuple(steps)
+
+    # N-olet mode: the selected rhythm is the total duration of one group.
+    remaining = duration
+    normal_count = settings.tuplet_normal_count
+    while remaining > 0:
+        if len(steps) + tuplet_count > MAX_ARPEGGIO_STEPS:
+            raise ArpeggiatorError(
+                f"L'arpège dépasserait la limite de {MAX_ARPEGGIO_STEPS} notes. "
+                "Choisissez une valeur rythmique plus grande, réduisez N ou réduisez la durée."
+            )
+
+        group_duration = min(settings.selected_rhythm_duration, remaining)
+        actual_per_note = group_duration / tuplet_count
+        written_per_note = group_duration / normal_count
+
+        for group_index in range(tuplet_count):
+            steps.append(
+                ArpeggioStep(
+                    note=pitch_semitone_to_lilypond(next_pitch()),
+                    actual_duration=actual_per_note,
+                    written_duration=written_per_note,
+                    starts_tuplet=group_index == 0,
+                    ends_tuplet=group_index == tuplet_count - 1,
+                )
+            )
+        remaining -= group_duration
 
     return tuple(steps)
