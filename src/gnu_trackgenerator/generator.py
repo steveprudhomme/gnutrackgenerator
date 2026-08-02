@@ -298,14 +298,24 @@ def _segment_timeline_chunks(segment: Segment):
 
 
 def _build_click_music(project: ProjectData) -> str:
-    """Build the DrumStaff click-track music body."""
+    """Build the global DrumStaff click-track timeline.
+
+    When the project-level click track is disabled, invisible LilyPond skips
+    preserve every tempo, meter and measure duration without producing drum
+    notes in the MIDI or WAV output.
+    """
     music_lines: list[str] = []
     for index, segment in enumerate(project.segments, start=1):
-        pattern = _segment_measure_pattern(segment)
+        if project.click_track_enabled:
+            pattern = _segment_measure_pattern(segment)
+            click_state = "activé"
+        else:
+            pattern = f"s{_measure_duration_multiplier(segment)}"
+            click_state = "désactivé"
         music_lines.extend(
             [
                 f"  % Segment {index}: {segment.numerator}/{segment.denominator}, "
-                f"{segment.bpm} BPM, {segment.measures} mesure(s)",
+                f"{segment.bpm} BPM, {segment.measures} mesure(s), click {click_state}",
                 f"  \\time {segment.numerator}/{segment.denominator}",
                 f"  \\tempo {segment.denominator} = {segment.bpm}",
                 f"  \\repeat unfold {segment.measures} {{ {pattern} | }}",
@@ -887,6 +897,7 @@ def generate_project(
     log(f"GNU TrackGenerator {APP_VERSION} — journal de génération")
     log(f"[sortie] {out_dir}")
     log(f"[nom de base] {stem.name}")
+    log(f"[click track global] {'activé' if project.click_track_enabled else 'désactivé'}")
 
     try:
         gen_path = save_project(project, stem.with_suffix(".gen"))

@@ -177,21 +177,18 @@ Créer une palette d’historique inspirée des logiciels de création comme Pho
 
 ### 3. Désactiver le click track
 
-- Ajouter une option permettant de désactiver le click track pour une ligne.
-- Lorsque le clic est désactivé :
-  - la ligne demeure dans la séquence;
-  - les accords, arpèges ou strums peuvent continuer à être générés;
-  - la durée et la structure de la ligne demeurent inchangées;
-  - aucune percussion de métronome n’est produite pour cette ligne.
-- Sauvegarder l’état dans le format `.gen`.
-- Afficher clairement l’état désactivé dans l’interface.
-- Prévoir éventuellement une commande globale pour désactiver ou réactiver tous les clics.
+- ✅ **Réalisé en v0.6.1** — interrupteur global **Click track du projet**.
+- ✅ **Réalisé en v0.6.1** — désactivation de toutes les percussions de métronome pour l’ensemble du projet.
+- ✅ **Réalisé en v0.6.1** — conservation des tempos, signatures, mesures, accords et arpégiateurs.
+- ✅ **Réalisé en v0.6.1** — sauvegarde de l’état dans le format `.gen` avec rétrocompatibilité des anciens projets.
+- ✅ **Réalisé en v0.6.1** — intégration à Annuler et Rétablir.
+- Prévoir ultérieurement une automation du click track ou des changements d’état à des points précis de la séquence, si un besoin musical clair est confirmé.
 
 ### Critères de réalisation
 
 - Une ligne complexe peut être dupliquée et déplacée sans perte d’information.
 - L’ordre affiché correspond exactement à l’ordre exporté.
-- La désactivation du clic ne modifie pas la durée des accords ni la carte de tempo.
+- La désactivation globale du clic ne modifie pas la durée des accords ni la carte de tempo.
 - Toutes ces opérations participent à l’historique `Ctrl+Z`.
 
 ---
@@ -378,6 +375,13 @@ où `D` signifie *downstroke*, `U` *upstroke* et `-` une absence d’attaque.
 - Déplacement des lignes par cliquer-glisser avec une poignée dédiée.
 - Ordre de séquence conservé dans les sauvegardes et les exports.
 - Compatibilité complète avec Annuler et Rétablir.
+
+## v0.6.1 — Activation globale du click track
+
+- Interrupteur global pour activer ou désactiver le métronome.
+- Persistance du réglage dans le projet `.gen`.
+- Conservation de la structure temporelle et des parties harmoniques en mode silencieux.
+- Intégration à l’historique Annuler/Rétablir.
 
 ---
 

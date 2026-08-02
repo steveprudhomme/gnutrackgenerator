@@ -112,13 +112,19 @@ Pour tolérer certaines écritures non standard rencontrées dans des progressio
 
 ## Formats de données
 
+### Activation globale du click track
+
+Le champ racine `click_track_enabled` contrôle le métronome pour l’ensemble du projet. Il vaut `true` par défaut afin de maintenir la compatibilité avec les fichiers `.gen` antérieurs. Lorsqu’il vaut `false`, le moteur remplace les coups de batterie par des silences invisibles LilyPond tout en conservant les commandes de tempo, les signatures, les mesures et les pistes d’accords.
+
+
 Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, `chord_mode`, `measure_chords`, `chord_grid_unit`, `grid_chords` et `chord_instrument` sont optionnels selon le mode harmonique choisi.
 
 ```json
 {
   "app": "GNU TrackGenerator",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "soundfont_path": null,
+  "click_track_enabled": true,
   "segments": [
     {
       "bpm": 120,

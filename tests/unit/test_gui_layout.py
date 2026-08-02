@@ -30,6 +30,11 @@ class SegmentRowLayoutTests(unittest.TestCase):
     def test_duplicate_command_is_not_in_row_menu(self) -> None:
         self.assertNotIn("⧉ Dupliquer la ligne", self.source)
 
+    def test_global_click_track_switch_is_present(self) -> None:
+        self.assertIn('text="Click track du projet"', self.source)
+        self.assertIn('variable=self.click_track_enabled_var', self.source)
+        self.assertIn('"click_track_enabled": bool(self.click_track_enabled_var.get())', self.source)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -124,7 +124,7 @@ Consulter `SUPPORT.md` avant d’ouvrir un ticket. Pour signaler un bogue, utili
 
 ## Annuler ou rétablir une modification
 
-La version 0.6.0 propose les deux directions de l’historique d’édition et l’organisation interactive de la séquence.
+La version 0.6.1 propose les deux directions de l’historique d’édition et l’organisation interactive de la séquence.
 
 Pour **annuler** :
 
@@ -141,6 +141,15 @@ Pour **rétablir** une action annulée :
 L’historique couvre notamment les champs de tempo et de signature, les accords, les réglages d’arpégiateur, le SoundFont ainsi que l’ajout et la suppression de lignes. Les frappes rapprochées sont regroupées pour qu’un mot ou une valeur puisse être annulé en une seule étape plutôt qu’un caractère à la fois.
 
 Après une annulation, toute nouvelle modification efface les états qui auraient pu être rétablis. Lorsqu’un autre projet `.gen` est ouvert, les deux piles sont réinitialisées afin d’éviter de restaurer accidentellement le projet précédent.
+
+## Activer ou désactiver le click track du projet
+
+Utiliser l’interrupteur **Click track du projet**, situé sous la configuration du SoundFont.
+
+- **Activé** : la grosse caisse marque le premier temps et la caisse claire les autres subdivisions.
+- **Désactivé** : aucun coup de métronome n’est produit dans le MIDI ou le WAV.
+
+La désactivation ne retire pas les tempos, signatures, mesures, accords ni arpégiateurs. Le réglage est sauvegardé dans le fichier `.gen` et peut être annulé ou rétabli avec `Ctrl+Z` et `Ctrl+Y`.
 
 ## Utiliser les accords symboliques
 

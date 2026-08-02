@@ -1,4 +1,4 @@
-![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.6.0-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
+![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.6.1-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
 
 # GNU TrackGenerator
 
@@ -198,7 +198,7 @@ fluidsynth --version
 Si une commande est introuvable, il faut ajouter le dossier contenant l’exécutable correspondant au `PATH` de Windows.
 
 
-## Fonctionnalités de la version 0.6.0
+## Fonctionnalités de la version 0.6.1
 
 - Commandes **Annuler** et **Rétablir** accessibles depuis le menu **Édition**, les boutons dédiés et les raccourcis `Ctrl+Z`, `Ctrl+Y` ou `Ctrl+Maj+Z`.
 - Piles d’annulation et de rétablissement limitées aux 100 derniers états afin de contrôler l’utilisation de la mémoire.
@@ -206,6 +206,8 @@ Si une commande est introuvable, il faut ajouter le dossier contenant l’exécu
 - Regroupement automatique de la saisie au clavier pour éviter une étape d’annulation par caractère.
 - Annulation des modifications de champs, des accords, des réglages d’arpégiateur, du SoundFont, de l’ajout et de la suppression de lignes.
 - Réinitialisation propre de l’historique lors de l’ouverture d’un autre projet `.gen`.
+- Interrupteur global **Click track du projet** permettant d’activer ou de désactiver le métronome pour l’ensemble du projet.
+- Lorsque le click track est désactivé, les tempos, signatures, durées, accords et arpégiateurs sont conservés; seules les attaques de grosse caisse et de caisse claire sont supprimées des sorties MIDI/WAV.
 - Duplication complète d’une ligne avec le bouton **D**, placé immédiatement à droite du bouton `−`, avec insertion de la copie sous la ligne d’origine.
 - Copie indépendante de tous les paramètres : tempo, signature, mesures, accords, grille rythmique, instrument et arpégiateurs.
 - Réorganisation des lignes par cliquer-glisser avec la poignée `⠿` située à droite.

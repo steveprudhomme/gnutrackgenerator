@@ -21,7 +21,7 @@ from .rhythm import (
 )
 
 APP_NAME = "GNU TrackGenerator"
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.6.1"
 
 # LilyPond note durations are represented by powers of two: 1, 2, 4, 8, 16...
 SUPPORTED_DENOMINATORS = {1, 2, 4, 8, 16, 32, 64}
@@ -331,6 +331,7 @@ class ProjectData:
 
     segments: list[Segment]
     soundfont_path: str | None = None
+    click_track_enabled: bool = True
     app: str = APP_NAME
     version: str = APP_VERSION
 
@@ -338,6 +339,8 @@ class ProjectData:
         """Validate the full project."""
         if not self.segments:
             raise ValidationError("Le projet doit contenir au moins une rangée.")
+        if not isinstance(self.click_track_enabled, bool):
+            raise ValidationError("L’état global du click track doit être vrai ou faux.")
         for index, segment in enumerate(self.segments, start=1):
             try:
                 segment.validate()
@@ -350,6 +353,7 @@ class ProjectData:
             "app": self.app,
             "version": self.version,
             "soundfont_path": self.soundfont_path,
+            "click_track_enabled": self.click_track_enabled,
             "segments": [segment.to_dict() for segment in self.segments],
         }
 
@@ -361,9 +365,16 @@ class ProjectData:
         except (KeyError, TypeError) as exc:
             raise ValidationError("Fichier .gen invalide: la liste de segments est manquante.") from exc
 
+        raw_click_track_enabled = payload.get("click_track_enabled", True)
+        if not isinstance(raw_click_track_enabled, bool):
+            raise ValidationError(
+                "Fichier .gen invalide: click_track_enabled doit être un booléen."
+            )
+
         project = cls(
             segments=segments,
             soundfont_path=payload.get("soundfont_path") or None,
+            click_track_enabled=raw_click_track_enabled,
             app=str(payload.get("app", APP_NAME)),
             version=str(payload.get("version", APP_VERSION)),
         )

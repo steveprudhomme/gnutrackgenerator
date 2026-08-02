@@ -30,6 +30,26 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 
 - Rien pour le moment.
 
+## [0.6.1] - 2026-08-02
+
+### Ajouté
+
+- Interrupteur global **Click track du projet** dans l’interface.
+- Champ `click_track_enabled` dans le format `.gen`, avec valeur par défaut `true` pour les anciens projets.
+- Intégration du réglage global aux commandes Annuler et Rétablir.
+- Journalisation de l’état du click track pendant la génération.
+- Tests de sérialisation, de rétrocompatibilité et de génération silencieuse.
+
+### Changé
+
+- Lorsque le click track est désactivé, le moteur LilyPond génère des silences invisibles qui conservent la carte de tempo, les signatures et la durée totale du projet.
+- Les accords, arpèges et autres contenus harmoniques continuent d’être exportés normalement lorsque le métronome est désactivé.
+- Passage de la version du projet à `0.6.1`.
+
+### Corrigé
+
+- Le click track peut maintenant être retiré globalement des fichiers MIDI et WAV sans modifier la structure temporelle du projet.
+
 ## [0.6.0] - 2026-08-02
 
 ### Ajouté

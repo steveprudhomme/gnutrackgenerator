@@ -903,6 +903,7 @@ class TrackGeneratorApp(ctk.CTk):
 
         self.rows: list[SegmentRow] = []
         self.soundfont_var = ctk.StringVar(value="")
+        self.click_track_enabled_var = ctk.BooleanVar(value=True)
         self.history: UndoHistory[dict] = UndoHistory(max_entries=100)
         self._history_suspended = True
         self._history_after_id: str | None = None
@@ -912,6 +913,9 @@ class TrackGeneratorApp(ctk.CTk):
         self._build_menu()
         self._build_layout()
         self.soundfont_var.trace_add("write", lambda *_args: self._schedule_history_record())
+        self.click_track_enabled_var.trace_add(
+            "write", lambda *_args: self._schedule_history_record()
+        )
         self.add_row(
             defaults=Segment(bpm=120, numerator=4, denominator=4, measures=4),
             record_history=False,
@@ -950,6 +954,7 @@ class TrackGeneratorApp(ctk.CTk):
         """Capture raw GUI values, including temporarily invalid input."""
         return {
             "soundfont": self.soundfont_var.get(),
+            "click_track_enabled": bool(self.click_track_enabled_var.get()),
             "rows": [row.to_history_state() for row in self.rows],
         }
 
@@ -998,6 +1003,9 @@ class TrackGeneratorApp(ctk.CTk):
                 row.destroy()
             self.rows.clear()
             self.soundfont_var.set(str(snapshot.get("soundfont", "")))
+            self.click_track_enabled_var.set(
+                bool(snapshot.get("click_track_enabled", True))
+            )
             for row_state in snapshot.get("rows", []):
                 row = self.add_row(record_history=False)
                 row.apply_history_state(row_state)
@@ -1070,6 +1078,16 @@ class TrackGeneratorApp(ctk.CTk):
         )
         ctk.CTkButton(soundfont_frame, text="Parcourir", command=self.browse_soundfont).grid(
             row=0, column=2, padx=(8, 12), pady=10
+        )
+        self.click_track_switch = ctk.CTkSwitch(
+            soundfont_frame,
+            text="Click track du projet",
+            variable=self.click_track_enabled_var,
+            onvalue=True,
+            offvalue=False,
+        )
+        self.click_track_switch.grid(
+            row=1, column=0, columnspan=3, padx=12, pady=(0, 10), sticky="w"
         )
 
         log_frame = ctk.CTkFrame(self)
@@ -1255,7 +1273,11 @@ class TrackGeneratorApp(ctk.CTk):
                 raise ValidationError(f"Rangée {index}: {exc}") from exc
 
         soundfont = self.soundfont_var.get().strip() or None
-        project = ProjectData(segments=segments, soundfont_path=soundfont)
+        project = ProjectData(
+            segments=segments,
+            soundfont_path=soundfont,
+            click_track_enabled=bool(self.click_track_enabled_var.get()),
+        )
         project.validate()
         return project
 
@@ -1303,6 +1325,7 @@ class TrackGeneratorApp(ctk.CTk):
                 row.destroy()
             self.rows.clear()
             self.soundfont_var.set(project.soundfont_path or "")
+            self.click_track_enabled_var.set(project.click_track_enabled)
             for segment in project.segments:
                 self.add_row(defaults=segment, record_history=False)
         finally:
