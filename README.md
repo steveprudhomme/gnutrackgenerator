@@ -1,4 +1,4 @@
-![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.4.2-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
+![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.5.0-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
 
 # GNU TrackGenerator
 
@@ -198,8 +198,13 @@ fluidsynth --version
 Si une commande est introuvable, il faut ajouter le dossier contenant l’exécutable correspondant au `PATH` de Windows.
 
 
-## Fonctionnalités de la version 0.4.2
+## Fonctionnalités de la version 0.5.0
 
+- Commande **Annuler** accessible depuis le menu **Édition**, le bouton **Annuler (Ctrl+Z)** et le raccourci `Ctrl+Z`.
+- Historique limité aux 100 derniers états afin de contrôler l’utilisation de la mémoire.
+- Regroupement automatique de la saisie au clavier pour éviter une étape d’annulation par caractère.
+- Annulation des modifications de champs, des accords, des réglages d’arpégiateur, du SoundFont, de l’ajout et de la suppression de lignes.
+- Réinitialisation propre de l’historique lors de l’ouverture d’un autre projet `.gen`.
 - Génération de click tracks programmables par segments : BPM, signature rythmique et nombre de mesures.
 - Menu de ligne `☰` au bout de chaque rangée.
 - Option **Accord au début de chaque ligne** dans le menu de ligne.

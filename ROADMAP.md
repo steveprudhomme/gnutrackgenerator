@@ -17,15 +17,15 @@ Les versions et leur contenu restent indicatifs. Une fonctionnalité peut être 
 
 # Priorités à venir
 
-## Priorité 1 — v0.5.0 : navigation, persistance et historique d’édition
+## Priorité 1 — v0.5.x : navigation, persistance et historique d’édition
 
 **Objectif :** rendre l’application plus sûre et plus conforme aux conventions d’un logiciel de bureau avant d’ajouter d’autres outils d’édition.
 
 ### 1. Historique d’édition
 
-- Ajouter la commande **Annuler** avec le raccourci `Ctrl+Z`.
+- ✅ **Réalisé en v0.5.0** — commande **Annuler** avec le raccourci `Ctrl+Z`.
 - Prévoir également **Rétablir** avec `Ctrl+Y` ou `Ctrl+Maj+Z`.
-- Centraliser les modifications du projet dans un historique réversible.
+- ✅ **Réalisé en v0.5.0** — centralisation des modifications dans un historique réversible borné à 100 états.
 - Couvrir progressivement les actions suivantes :
   - ajout et suppression d’une ligne;
   - modification du tempo, de la signature et du nombre de mesures;
@@ -34,8 +34,8 @@ Les versions et leur contenu restent indicatifs. Une fonctionnalité peut être 
   - réglages d’arpégiateur;
   - duplication et déplacement de lignes;
   - activation ou désactivation du click track.
-- Limiter la taille de l’historique afin d’éviter une consommation excessive de mémoire.
-- Vider ou reconstruire correctement l’historique lors de l’ouverture d’un autre projet.
+- ✅ **Réalisé en v0.5.0** — historique limité à 100 états pour maîtriser la mémoire.
+- ✅ **Réalisé en v0.5.0** — réinitialisation de l’historique lors de l’ouverture d’un autre projet.
 
 ### 2. Menu **Fichier**
 
@@ -306,6 +306,15 @@ où `D` signifie *downstroke*, `U` *upstroke* et `-` une absence d’attaque.
 - Virgule pour prolonger un accord sans nouvelle attaque.
 - Silences par case vide.
 - Accords complexes avec altérations parenthésées.
+
+## v0.5.0 — Première commande d’édition réversible
+
+- Commande **Annuler** dans le menu Édition.
+- Raccourci `Ctrl+Z` et bouton dédié.
+- Historique borné à 100 états.
+- Saisie au clavier regroupée en étapes cohérentes.
+- Restauration des lignes, accords, champs dynamiques et arpégiateurs.
+- Réinitialisation de l’historique à l’ouverture d’un projet.
 
 ## v0.4.x — Arpégiateur et stabilisation du parseur
 

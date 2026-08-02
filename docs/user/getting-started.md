@@ -122,6 +122,18 @@ Si Windows ne trouve pas ces commandes, ajouter le dossier contenant `lilypond.e
 
 Consulter `SUPPORT.md` avant d’ouvrir un ticket. Pour signaler un bogue, utiliser le modèle de rapport de bogue dans `.github/ISSUE_TEMPLATE/bug_report.md`.
 
+## Annuler une modification
+
+La version 0.5.0 ajoute une commande **Annuler**. Elle est disponible de trois façons :
+
+- menu **Édition → Annuler**;
+- bouton **Annuler (Ctrl+Z)** au bas de la fenêtre;
+- raccourci clavier `Ctrl+Z`.
+
+L’historique couvre notamment les champs de tempo et de signature, les accords, les réglages d’arpégiateur, le SoundFont ainsi que l’ajout et la suppression de lignes. Les frappes rapprochées sont regroupées pour qu’un mot ou une valeur puisse être annulé en une seule étape plutôt qu’un caractère à la fois.
+
+Lorsqu’un autre projet `.gen` est ouvert, l’historique est réinitialisé afin que `Ctrl+Z` ne puisse pas restaurer accidentellement le projet précédent.
+
 ## Utiliser les accords symboliques
 
 Chaque ligne musicale possède un bouton de menu `☰`. Pour ajouter un accord à une ligne :

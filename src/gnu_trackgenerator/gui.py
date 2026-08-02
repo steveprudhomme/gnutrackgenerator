@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import tkinter as tk
 from tkinter import filedialog, messagebox
 
 try:
@@ -25,6 +26,7 @@ from .arpeggiator import (
 )
 from .chords import ChordParseError, SUPPORTED_CHORD_EXAMPLES, chord_symbol_to_lilypond_chord
 from .generator import GenerationError, generate_project
+from .history import UndoHistory
 from .models import (
     APP_NAME,
     APP_VERSION,
@@ -187,12 +189,14 @@ class SegmentRow(ctk.CTkFrame):
         master: ctk.CTkFrame,
         on_add_after,
         on_remove,
+        on_change=None,
         defaults: Segment | None = None,
         **kwargs,
     ) -> None:
         super().__init__(master, **kwargs)
         self.on_add_after = on_add_after
         self.on_remove = on_remove
+        self.on_change = on_change or (lambda: None)
         self.menu_visible = False
         self.chord_mode = CHORD_MODE_NONE
         self.line_chord_visible = False
@@ -237,6 +241,18 @@ class SegmentRow(ctk.CTkFrame):
         self.measures_var.trace_add("write", self._on_timing_changed)
         self.numerator_var.trace_add("write", self._on_timing_changed)
         self.denominator_var.trace_add("write", self._on_timing_changed)
+        for variable in (
+            self.bpm_var,
+            self.numerator_var,
+            self.denominator_var,
+            self.measures_var,
+            self.chord_symbol_var,
+            self.chord_instrument_var,
+            self.chord_grid_unit_var,
+        ):
+            self._register_history_var(variable)
+        for variable in self.measure_chord_vars + self.grid_chord_vars:
+            self._register_history_var(variable)
 
         if mode == CHORD_MODE_GRID:
             self.show_grid_chord_area()
@@ -244,6 +260,84 @@ class SegmentRow(ctk.CTkFrame):
             self.show_measure_chord_area()
         elif mode == CHORD_MODE_LINE:
             self.show_line_chord_area()
+
+    def _notify_change(self) -> None:
+        """Notify the application that the project state changed."""
+        self.on_change()
+
+    def _register_history_var(self, variable: ctk.Variable) -> None:
+        """Attach a history notification to a Tk variable."""
+        variable.trace_add("write", lambda *_args: self._notify_change())
+
+    def to_history_state(self) -> dict:
+        """Return an unvalidated, JSON-like snapshot of the editable row state."""
+        return {
+            "bpm": self.bpm_var.get(),
+            "numerator": self.numerator_var.get(),
+            "denominator": self.denominator_var.get(),
+            "measures": self.measures_var.get(),
+            "chord_mode": self.chord_mode,
+            "chord_symbol": self.chord_symbol_var.get(),
+            "chord_instrument_label": self.chord_instrument_var.get(),
+            "chord_grid_unit_label": self.chord_grid_unit_var.get(),
+            "measure_chords": [variable.get() for variable in self.measure_chord_vars],
+            "grid_chords": [variable.get() for variable in self.grid_chord_vars],
+            "line_arpeggiator": self.line_arpeggiator.to_dict(),
+            "measure_arpeggiators": [settings.to_dict() for settings in self.measure_arpeggiators],
+            "grid_arpeggiators": [settings.to_dict() for settings in self.grid_arpeggiators],
+        }
+
+    def apply_history_state(self, state: dict) -> None:
+        """Restore a snapshot created by :meth:`to_history_state`."""
+        self.bpm_var.set(str(state.get("bpm", "120")))
+        self.numerator_var.set(str(state.get("numerator", "4")))
+        self.denominator_var.set(str(state.get("denominator", "4")))
+        self.measures_var.set(str(state.get("measures", "4")))
+        self.chord_symbol_var.set(str(state.get("chord_symbol", "")))
+        self.chord_instrument_var.set(
+            str(state.get("chord_instrument_label", "Piano"))
+        )
+        self.chord_grid_unit_var.set(
+            str(state.get("chord_grid_unit_label", RHYTHM_UNIT_LABELS[RHYTHM_QUARTER]))
+        )
+
+        self.measure_chord_vars = []
+        for value in state.get("measure_chords", []):
+            variable = ctk.StringVar(value=str(value or ""))
+            self._register_history_var(variable)
+            self.measure_chord_vars.append(variable)
+
+        self.grid_chord_vars = []
+        for value in state.get("grid_chords", []):
+            variable = ctk.StringVar(value=str(value or ""))
+            self._register_history_var(variable)
+            self.grid_chord_vars.append(variable)
+
+        self.line_arpeggiator = ArpeggiatorSettings.from_dict(
+            state.get("line_arpeggiator")
+        )
+        self.measure_arpeggiators = [
+            ArpeggiatorSettings.from_dict(payload)
+            for payload in state.get("measure_arpeggiators", [])
+        ]
+        self.grid_arpeggiators = [
+            ArpeggiatorSettings.from_dict(payload)
+            for payload in state.get("grid_arpeggiators", [])
+        ]
+        self.line_arpeggiator_button.configure(
+            text=_arpeggiator_button_text(self.line_arpeggiator)
+        )
+
+        self.chord_mode = str(state.get("chord_mode", CHORD_MODE_NONE))
+        self._hide_all_chord_frames()
+        if self.chord_mode == CHORD_MODE_LINE:
+            self.show_line_chord_area()
+        elif self.chord_mode == CHORD_MODE_MEASURE:
+            self.show_measure_chord_area()
+        elif self.chord_mode == CHORD_MODE_GRID:
+            self.show_grid_chord_area()
+        else:
+            self.chord_mode = CHORD_MODE_NONE
 
     def _build_widgets(self) -> None:
         """Create and place row widgets."""
@@ -454,6 +548,7 @@ class SegmentRow(ctk.CTkFrame):
         def save(settings: ArpeggiatorSettings) -> None:
             self.line_arpeggiator = settings
             self.line_arpeggiator_button.configure(text=_arpeggiator_button_text(settings))
+            self._notify_change()
 
         ArpeggiatorDialog(self, self.line_arpeggiator, save)
 
@@ -463,6 +558,7 @@ class SegmentRow(ctk.CTkFrame):
         def save(settings: ArpeggiatorSettings) -> None:
             self.measure_arpeggiators[index] = settings
             button.configure(text=_arpeggiator_button_text(settings))
+            self._notify_change()
 
         ArpeggiatorDialog(self, self.measure_arpeggiators[index], save)
 
@@ -472,6 +568,7 @@ class SegmentRow(ctk.CTkFrame):
         def save(settings: ArpeggiatorSettings) -> None:
             self.grid_arpeggiators[index] = settings
             button.configure(text=_arpeggiator_button_text(settings))
+            self._notify_change()
 
         ArpeggiatorDialog(self, self.grid_arpeggiators[index], save)
 
@@ -495,44 +592,56 @@ class SegmentRow(ctk.CTkFrame):
         self.grid_chord_visible = False
 
     def show_line_chord_area(self) -> None:
+        changed = self.chord_mode != CHORD_MODE_LINE
         self.chord_mode = CHORD_MODE_LINE
         self._hide_all_chord_frames()
         self.line_chord_frame.grid(row=2, column=0, columnspan=11, padx=8, pady=(0, 8), sticky="ew")
         self.line_chord_visible = True
         self.hide_menu()
+        if changed:
+            self._notify_change()
 
     def hide_line_chord_area(self) -> None:
         self.line_chord_frame.grid_forget()
         self.line_chord_visible = False
 
     def show_measure_chord_area(self) -> None:
+        changed = self.chord_mode != CHORD_MODE_MEASURE
         self.chord_mode = CHORD_MODE_MEASURE
         self._hide_all_chord_frames()
         self._rebuild_measure_chord_inputs()
         self.measure_chord_frame.grid(row=2, column=0, columnspan=11, padx=8, pady=(0, 8), sticky="ew")
         self.measure_chord_visible = True
         self.hide_menu()
+        if changed:
+            self._notify_change()
 
     def hide_measure_chord_area(self) -> None:
         self.measure_chord_frame.grid_forget()
         self.measure_chord_visible = False
 
     def show_grid_chord_area(self) -> None:
+        changed = self.chord_mode != CHORD_MODE_GRID
         self.chord_mode = CHORD_MODE_GRID
         self._hide_all_chord_frames()
         self._rebuild_grid_chord_inputs()
         self.grid_chord_frame.grid(row=2, column=0, columnspan=11, padx=8, pady=(0, 8), sticky="ew")
         self.grid_chord_visible = True
         self.hide_menu()
+        if changed:
+            self._notify_change()
 
     def hide_grid_chord_area(self) -> None:
         self.grid_chord_frame.grid_forget()
         self.grid_chord_visible = False
 
     def disable_chords(self) -> None:
+        changed = self.chord_mode != CHORD_MODE_NONE
         self.chord_mode = CHORD_MODE_NONE
         self._hide_all_chord_frames()
         self.hide_menu()
+        if changed:
+            self._notify_change()
 
     def _measure_count(self) -> int | None:
         try:
@@ -543,7 +652,9 @@ class SegmentRow(ctk.CTkFrame):
 
     def _ensure_measure_chord_vars(self, count: int) -> None:
         while len(self.measure_chord_vars) < count:
-            self.measure_chord_vars.append(ctk.StringVar(value=""))
+            variable = ctk.StringVar(value="")
+            self._register_history_var(variable)
+            self.measure_chord_vars.append(variable)
 
     def _ensure_measure_arpeggiators(self, count: int) -> None:
         while len(self.measure_arpeggiators) < count:
@@ -596,7 +707,9 @@ class SegmentRow(ctk.CTkFrame):
 
     def _ensure_grid_chord_vars(self, count: int) -> None:
         while len(self.grid_chord_vars) < count:
-            self.grid_chord_vars.append(ctk.StringVar(value=""))
+            variable = ctk.StringVar(value="")
+            self._register_history_var(variable)
+            self.grid_chord_vars.append(variable)
 
     def _ensure_grid_arpeggiators(self, count: int) -> None:
         while len(self.grid_arpeggiators) < count:
@@ -756,9 +869,107 @@ class TrackGeneratorApp(ctk.CTk):
 
         self.rows: list[SegmentRow] = []
         self.soundfont_var = ctk.StringVar(value="")
+        self.history: UndoHistory[dict] = UndoHistory(max_entries=100)
+        self._history_suspended = True
+        self._history_after_id: str | None = None
 
+        self._build_menu()
         self._build_layout()
-        self.add_row(defaults=Segment(bpm=120, numerator=4, denominator=4, measures=4))
+        self.soundfont_var.trace_add("write", lambda *_args: self._schedule_history_record())
+        self.add_row(
+            defaults=Segment(bpm=120, numerator=4, denominator=4, measures=4),
+            record_history=False,
+        )
+        self._history_suspended = False
+        self.history.reset(self._capture_history_snapshot())
+        self._update_undo_controls()
+        self.bind_all("<Control-z>", self.undo)
+        self.bind_all("<Control-Z>", self.undo)
+        self.bind_all("<Command-z>", self.undo)
+
+    def _build_menu(self) -> None:
+        """Create the first standard application menu with Undo support."""
+        self.menu_bar = tk.Menu(self)
+        self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
+        self.edit_menu.add_command(
+            label="Annuler",
+            accelerator="Ctrl+Z",
+            command=self.undo,
+            state="disabled",
+        )
+        self.menu_bar.add_cascade(label="Édition", menu=self.edit_menu)
+        self.configure(menu=self.menu_bar)
+
+    def _capture_history_snapshot(self) -> dict:
+        """Capture raw GUI values, including temporarily invalid input."""
+        return {
+            "soundfont": self.soundfont_var.get(),
+            "rows": [row.to_history_state() for row in self.rows],
+        }
+
+    def _schedule_history_record(self) -> None:
+        """Debounce keyboard edits so one typed value becomes one undo step."""
+        if self._history_suspended:
+            return
+        if self._history_after_id is not None:
+            self.after_cancel(self._history_after_id)
+        self._history_after_id = self.after(450, self._commit_history_snapshot)
+
+    def _commit_history_snapshot(self) -> None:
+        """Commit the current GUI state to the bounded undo history."""
+        if self._history_after_id is not None:
+            try:
+                self.after_cancel(self._history_after_id)
+            except tk.TclError:
+                pass
+            self._history_after_id = None
+        if self._history_suspended:
+            return
+        self.history.record(self._capture_history_snapshot())
+        self._update_undo_controls()
+
+    def _flush_pending_history(self) -> None:
+        if self._history_after_id is not None:
+            self._commit_history_snapshot()
+
+    def _update_undo_controls(self) -> None:
+        state = "normal" if self.history.can_undo else "disabled"
+        if hasattr(self, "undo_button"):
+            self.undo_button.configure(state=state)
+        if hasattr(self, "edit_menu"):
+            self.edit_menu.entryconfigure(0, state=state)
+
+    def _restore_history_snapshot(self, snapshot: dict) -> None:
+        """Replace the GUI state without creating another history entry."""
+        self._history_suspended = True
+        try:
+            for row in self.rows:
+                row.destroy()
+            self.rows.clear()
+            self.soundfont_var.set(str(snapshot.get("soundfont", "")))
+            for row_state in snapshot.get("rows", []):
+                row = self.add_row(record_history=False)
+                row.apply_history_state(row_state)
+            if not self.rows:
+                self.add_row(
+                    defaults=Segment(bpm=120, numerator=4, denominator=4, measures=4),
+                    record_history=False,
+                )
+            self._refresh_rows_grid()
+        finally:
+            self._history_suspended = False
+
+    def undo(self, _event=None):
+        """Restore the previous project state and handle ``Ctrl+Z``."""
+        self._flush_pending_history()
+        snapshot = self.history.undo()
+        if snapshot is None:
+            self.bell()
+            self._update_undo_controls()
+            return "break"
+        self._restore_history_snapshot(snapshot)
+        self._update_undo_controls()
+        return "break"
 
     def _build_layout(self) -> None:
         """Build all static parts of the GUI."""
@@ -819,13 +1030,21 @@ class TrackGeneratorApp(ctk.CTk):
         actions.grid(row=5, column=0, padx=18, pady=(6, 18), sticky="ew")
         actions.grid_columnconfigure(0, weight=1)
         actions.grid_columnconfigure(1, weight=1)
-        actions.grid_columnconfigure(2, weight=2)
+        actions.grid_columnconfigure(2, weight=1)
+        actions.grid_columnconfigure(3, weight=2)
 
+        self.undo_button = ctk.CTkButton(
+            actions,
+            text="Annuler (Ctrl+Z)",
+            command=self.undo,
+            state="disabled",
+        )
+        self.undo_button.grid(row=0, column=0, padx=8, pady=12, sticky="ew")
         ctk.CTkButton(actions, text="Sauvegarder le projet", command=self.save_project_dialog).grid(
-            row=0, column=0, padx=8, pady=12, sticky="ew"
+            row=0, column=1, padx=8, pady=12, sticky="ew"
         )
         ctk.CTkButton(actions, text="Charger un projet", command=self.load_project_dialog).grid(
-            row=0, column=1, padx=8, pady=12, sticky="ew"
+            row=0, column=2, padx=8, pady=12, sticky="ew"
         )
         ctk.CTkButton(
             actions,
@@ -833,14 +1052,23 @@ class TrackGeneratorApp(ctk.CTk):
             height=46,
             font=ctk.CTkFont(size=18, weight="bold"),
             command=self.generate_dialog,
-        ).grid(row=0, column=2, padx=8, pady=12, sticky="ew")
+        ).grid(row=0, column=3, padx=8, pady=12, sticky="ew")
 
-    def add_row(self, after: SegmentRow | None = None, defaults: Segment | None = None) -> None:
+    def add_row(
+        self,
+        after: SegmentRow | None = None,
+        defaults: Segment | None = None,
+        *,
+        record_history: bool = True,
+    ) -> SegmentRow:
         """Add a row, optionally directly after another row."""
+        if record_history:
+            self._flush_pending_history()
         row = SegmentRow(
             self.rows_frame,
             on_add_after=lambda current: self.add_row(after=current),
             on_remove=self.remove_row,
+            on_change=self._schedule_history_record,
             defaults=defaults,
         )
 
@@ -850,15 +1078,20 @@ class TrackGeneratorApp(ctk.CTk):
         else:
             self.rows.append(row)
         self._refresh_rows_grid()
+        if record_history:
+            self._commit_history_snapshot()
+        return row
 
     def remove_row(self, row: SegmentRow) -> None:
         """Remove a row while keeping at least one row in the project."""
         if len(self.rows) <= 1:
             messagebox.showinfo(APP_NAME, "Le projet doit contenir au moins une rangée.")
             return
+        self._flush_pending_history()
         self.rows.remove(row)
         row.destroy()
         self._refresh_rows_grid()
+        self._commit_history_snapshot()
 
     def _refresh_rows_grid(self) -> None:
         """Re-grid rows after add/remove operations."""
@@ -926,12 +1159,18 @@ class TrackGeneratorApp(ctk.CTk):
             messagebox.showerror("Erreur", f"Impossible de charger le projet:\n{exc}")
             return
 
-        for row in self.rows:
-            row.destroy()
-        self.rows.clear()
-        self.soundfont_var.set(project.soundfont_path or "")
-        for segment in project.segments:
-            self.add_row(defaults=segment)
+        self._history_suspended = True
+        try:
+            for row in self.rows:
+                row.destroy()
+            self.rows.clear()
+            self.soundfont_var.set(project.soundfont_path or "")
+            for segment in project.segments:
+                self.add_row(defaults=segment, record_history=False)
+        finally:
+            self._history_suspended = False
+        self.history.reset(self._capture_history_snapshot())
+        self._update_undo_controls()
 
     def clear_command_log(self) -> None:
         """Clear the visible generation log."""

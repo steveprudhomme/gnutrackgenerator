@@ -8,19 +8,11 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 
 ### Ajouté
 
-- Ajout d’une feuille de route priorisée pour les prochaines évolutions de l’interface, de l’édition de séquence et de l’interprétation harmonique.
-- Planification d’un historique d’édition avec **Annuler** (`Ctrl+Z`) et, lorsque possible, **Rétablir** (`Ctrl+Y` ou `Ctrl+Maj+Z`).
-- Planification d’un menu **Fichier** regroupant **Enregistrer**, **Enregistrer sous**, **Ouvrir** et **Exporter**.
-- Planification d’un menu **Édition → Options** avec persistance du SoundFont et des préférences utilisateur entre les sessions.
-- Planification d’un menu **?** contenant l’aide intégrée et les informations sur l’application.
-- Planification de la duplication complète des lignes, de leur réordonnancement et de la désactivation du click track par ligne.
-- Planification d’un réglage d’arpégiateur applicable à l’ensemble d’une ligne, dans chacun des modes d’accord.
-- Planification d’un moteur de strumming accessible par un bouton **S**, distinct du choix de l’instrument.
+- Rien pour le moment.
 
 ### Changé
 
-- Réorganisation de `ROADMAP.md` selon les dépendances techniques et l’ordre de priorité proposé pour les versions `0.5.0`, `0.6.0` et `0.7.0`.
-- Clarification de la séparation future entre l’instrument choisi et le mode d’interprétation de l’accord : accord plaqué, arpège ou pattern de strum.
+- Rien pour le moment.
 
 ### Déprécié
 
@@ -37,6 +29,28 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 ### Sécurité
 
 - Rien pour le moment.
+
+## [0.5.0] - 2026-08-02
+
+### Ajouté
+
+- Commande **Annuler** dans le menu **Édition** avec l’accélérateur `Ctrl+Z`.
+- Bouton **Annuler (Ctrl+Z)** dans la barre d’actions principale.
+- Module indépendant `history.py` fournissant une pile d’annulation bornée à 100 états.
+- Historique des valeurs brutes de l’interface, y compris les saisies temporairement invalides.
+- Prise en charge de l’annulation pour les champs principaux, le SoundFont, les accords, les modes d’accord, les réglages d’arpégiateur ainsi que l’ajout et la suppression de lignes.
+- Tests unitaires du gestionnaire d’historique.
+
+### Changé
+
+- Les frappes rapprochées sont regroupées dans une seule étape d’annulation grâce à un délai de stabilisation.
+- L’ouverture d’un projet `.gen` réinitialise l’historique afin d’éviter de revenir accidentellement au projet précédent.
+- Passage de la version du projet à `0.5.0`.
+
+### Corrigé
+
+- La restauration reconstruit les champs dynamiques d’accords et leurs réglages d’arpégiateur sans exiger que l’état intermédiaire soit déjà valide.
+
 ## [0.4.2] - 2026-08-02
 
 ### Changé

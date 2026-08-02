@@ -88,6 +88,15 @@ Pour tolérer certaines écritures non standard rencontrées dans des progressio
 | `Cmaj13` | `1, 3, 5, 7, 9, 11, 13` |
 | `C7#9` | `1, 3, 5, b7, #9` |
 
+## Historique d’édition
+
+- La commande **Annuler** est disponible depuis le menu **Édition**, le bouton principal et le raccourci `Ctrl+Z`.
+- L’historique conserve au maximum 100 états afin de limiter l’utilisation de la mémoire.
+- Les instantanés utilisent les valeurs brutes de l’interface afin de restaurer aussi les saisies temporairement invalides.
+- Les frappes rapprochées sont regroupées dans une seule étape d’annulation.
+- L’ouverture d’un autre projet `.gen` réinitialise la pile d’annulation.
+- La restauration doit préserver les accords dynamiques et les réglages d’arpégiateur associés.
+
 ## Exigences non fonctionnelles
 
 - Maintenabilité : séparation entre GUI, modèles, génération et conversion d’accords.
@@ -103,7 +112,7 @@ Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, 
 ```json
 {
   "app": "GNU TrackGenerator",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "soundfont_path": null,
   "segments": [
     {
