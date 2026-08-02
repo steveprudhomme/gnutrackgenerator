@@ -24,7 +24,7 @@ Les versions et leur contenu restent indicatifs. Une fonctionnalité peut être 
 ### 1. Historique d’édition
 
 - ✅ **Réalisé en v0.5.0** — commande **Annuler** avec le raccourci `Ctrl+Z`.
-- Prévoir également **Rétablir** avec `Ctrl+Y` ou `Ctrl+Maj+Z`.
+- ✅ **Réalisé en v0.5.1** — commande **Rétablir** avec `Ctrl+Y` ou `Ctrl+Maj+Z`.
 - ✅ **Réalisé en v0.5.0** — centralisation des modifications dans un historique réversible borné à 100 états.
 - Couvrir progressivement les actions suivantes :
   - ajout et suppression d’une ligne;
@@ -36,6 +36,12 @@ Les versions et leur contenu restent indicatifs. Une fonctionnalité peut être 
   - activation ou désactivation du click track.
 - ✅ **Réalisé en v0.5.0** — historique limité à 100 états pour maîtriser la mémoire.
 - ✅ **Réalisé en v0.5.0** — réinitialisation de l’historique lors de l’ouverture d’un autre projet.
+- Rendre la limite de l’historique configurable dans **Édition → Options** :
+  - conserver `100` comme valeur par défaut;
+  - permettre à l’utilisateur de choisir le nombre maximal d’états conservés;
+  - enregistrer cette préférence entre les sessions;
+  - valider la valeur saisie et expliquer l’impact potentiel sur la mémoire;
+  - appliquer proprement une réduction de la limite à un historique déjà existant.
 
 ### 2. Menu **Fichier**
 
@@ -71,6 +77,11 @@ GNU TrackGenerator — MonProjet.gen *
 
 - Déplacer la configuration du SoundFont dans **Édition → Options**.
 - Conserver le chemin du SoundFont après la fermeture de l’application.
+- Ajouter un réglage **Nombre maximal d’états de l’historique** :
+  - valeur par défaut : `100`;
+  - valeur persistante entre les sessions;
+  - contrôle numérique avec limites raisonnables;
+  - indication de l’incidence possible sur l’utilisation de la mémoire.
 - Enregistrer les préférences utilisateur dans un fichier de configuration distinct du projet `.gen`.
 - Prévoir la même architecture pour les chemins de :
   - LilyPond;
@@ -79,7 +90,38 @@ GNU TrackGenerator — MonProjet.gen *
   - autres outils externes futurs.
 - Valider les chemins au moment de leur saisie et afficher un diagnostic compréhensible.
 
-### 5. Menu **?**
+### 5. Menu **Fenêtre → Palette Historique**
+
+Créer une palette d’historique inspirée des logiciels de création comme Photoshop.
+
+- Ajouter un menu **Fenêtre**.
+- Ajouter la commande **Palette Historique**.
+- Afficher la palette dans une fenêtre flottante ou un panneau pouvant rester ouvert.
+- Présenter les états dans l’ordre chronologique, avec :
+  - le nom de l’action;
+  - un numéro d’étape;
+  - l’heure de l’action, lorsque disponible;
+  - une indication claire de l’état actuellement actif.
+- Permettre de sélectionner directement un état antérieur ou ultérieur.
+- Restaurer l’ensemble du projet tel qu’il était à l’état choisi :
+  - lignes;
+  - tempos et signatures;
+  - accords;
+  - grilles rythmiques;
+  - arpégiateurs;
+  - réglages de génération pertinents.
+- Prévenir clairement l’utilisateur lorsqu’une nouvelle modification effectuée depuis un ancien état supprimera la branche de rétablissement.
+- Permettre de nommer ou de marquer certains états importants comme points de repère.
+- Ajouter une option facultative pour sauvegarder l’historique :
+  - avec le projet `.gen`; ou
+  - dans un fichier compagnon versionné;
+  - sans imposer cette sauvegarde aux projets qui doivent demeurer légers.
+- Restaurer l’historique sauvegardé lors de la réouverture du projet, lorsque cette option est activée.
+- Prévoir une stratégie de migration et de validation afin qu’un historique ancien ou endommagé ne rende jamais le projet principal illisible.
+- Respecter la limite d’historique configurée dans **Édition → Options**.
+- Permettre de vider l’historique après confirmation.
+
+### 6. Menu **?**
 
 - Ajouter un menu **?** ou **Aide**.
 - Ajouter une commande **Aide** ouvrant un fichier d’aide intégré.
@@ -96,7 +138,9 @@ GNU TrackGenerator — MonProjet.gen *
 - Les commandes du menu fonctionnent sans dupliquer la logique déjà présente dans l’interface.
 - Le nom et l’état modifié du projet sont toujours cohérents avec le fichier courant.
 - Le SoundFont choisi est restauré après redémarrage.
-- `Ctrl+Z` restaure réellement l’état précédent sans corrompre les listes d’accords ou d’arpégiateurs.
+- La limite d’historique configurée est restaurée après redémarrage et appliquée sans corruption des états existants.
+- `Ctrl+Z` restaure réellement l’état précédent et `Ctrl+Y` ou `Ctrl+Maj+Z` rétablit l’état suivant sans corrompre les listes d’accords ou d’arpégiateurs.
+- La palette Historique permet d’atteindre directement un état choisi et, lorsque l’option est activée, de retrouver l’historique sauvegardé après réouverture du projet.
 
 ---
 
@@ -307,10 +351,11 @@ où `D` signifie *downstroke*, `U` *upstroke* et `-` une absence d’attaque.
 - Silences par case vide.
 - Accords complexes avec altérations parenthésées.
 
-## v0.5.0 — Première commande d’édition réversible
+## v0.5.0–0.5.1 — Historique d’édition réversible
 
 - Commande **Annuler** dans le menu Édition.
-- Raccourci `Ctrl+Z` et bouton dédié.
+- Commande **Rétablir** dans le menu Édition.
+- Raccourcis `Ctrl+Z`, `Ctrl+Y` et `Ctrl+Maj+Z`, avec boutons dédiés.
 - Historique borné à 100 états.
 - Saisie au clavier regroupée en étapes cohérentes.
 - Restauration des lignes, accords, champs dynamiques et arpégiateurs.

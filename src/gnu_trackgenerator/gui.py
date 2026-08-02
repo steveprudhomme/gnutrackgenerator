@@ -882,19 +882,29 @@ class TrackGeneratorApp(ctk.CTk):
         )
         self._history_suspended = False
         self.history.reset(self._capture_history_snapshot())
-        self._update_undo_controls()
+        self._update_history_controls()
         self.bind_all("<Control-z>", self.undo)
-        self.bind_all("<Control-Z>", self.undo)
         self.bind_all("<Command-z>", self.undo)
+        self.bind_all("<Control-y>", self.redo)
+        self.bind_all("<Control-Shift-z>", self.redo)
+        self.bind_all("<Control-Shift-Z>", self.redo)
+        self.bind_all("<Command-Shift-z>", self.redo)
+        self.bind_all("<Command-Shift-Z>", self.redo)
 
     def _build_menu(self) -> None:
-        """Create the first standard application menu with Undo support."""
+        """Create the standard Edit menu with Undo and Redo support."""
         self.menu_bar = tk.Menu(self)
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.edit_menu.add_command(
             label="Annuler",
             accelerator="Ctrl+Z",
             command=self.undo,
+            state="disabled",
+        )
+        self.edit_menu.add_command(
+            label="Rétablir",
+            accelerator="Ctrl+Y / Ctrl+Maj+Z",
+            command=self.redo,
             state="disabled",
         )
         self.menu_bar.add_cascade(label="Édition", menu=self.edit_menu)
@@ -926,18 +936,23 @@ class TrackGeneratorApp(ctk.CTk):
         if self._history_suspended:
             return
         self.history.record(self._capture_history_snapshot())
-        self._update_undo_controls()
+        self._update_history_controls()
 
     def _flush_pending_history(self) -> None:
         if self._history_after_id is not None:
             self._commit_history_snapshot()
 
-    def _update_undo_controls(self) -> None:
-        state = "normal" if self.history.can_undo else "disabled"
+    def _update_history_controls(self) -> None:
+        """Synchronize Undo/Redo buttons and menu entries with both stacks."""
+        undo_state = "normal" if self.history.can_undo else "disabled"
+        redo_state = "normal" if self.history.can_redo else "disabled"
         if hasattr(self, "undo_button"):
-            self.undo_button.configure(state=state)
+            self.undo_button.configure(state=undo_state)
+        if hasattr(self, "redo_button"):
+            self.redo_button.configure(state=redo_state)
         if hasattr(self, "edit_menu"):
-            self.edit_menu.entryconfigure(0, state=state)
+            self.edit_menu.entryconfigure(0, state=undo_state)
+            self.edit_menu.entryconfigure(1, state=redo_state)
 
     def _restore_history_snapshot(self, snapshot: dict) -> None:
         """Replace the GUI state without creating another history entry."""
@@ -965,10 +980,22 @@ class TrackGeneratorApp(ctk.CTk):
         snapshot = self.history.undo()
         if snapshot is None:
             self.bell()
-            self._update_undo_controls()
+            self._update_history_controls()
             return "break"
         self._restore_history_snapshot(snapshot)
-        self._update_undo_controls()
+        self._update_history_controls()
+        return "break"
+
+    def redo(self, _event=None):
+        """Restore the next project state and handle Redo shortcuts."""
+        self._flush_pending_history()
+        snapshot = self.history.redo()
+        if snapshot is None:
+            self.bell()
+            self._update_history_controls()
+            return "break"
+        self._restore_history_snapshot(snapshot)
+        self._update_history_controls()
         return "break"
 
     def _build_layout(self) -> None:
@@ -1031,7 +1058,8 @@ class TrackGeneratorApp(ctk.CTk):
         actions.grid_columnconfigure(0, weight=1)
         actions.grid_columnconfigure(1, weight=1)
         actions.grid_columnconfigure(2, weight=1)
-        actions.grid_columnconfigure(3, weight=2)
+        actions.grid_columnconfigure(3, weight=1)
+        actions.grid_columnconfigure(4, weight=2)
 
         self.undo_button = ctk.CTkButton(
             actions,
@@ -1040,11 +1068,18 @@ class TrackGeneratorApp(ctk.CTk):
             state="disabled",
         )
         self.undo_button.grid(row=0, column=0, padx=8, pady=12, sticky="ew")
+        self.redo_button = ctk.CTkButton(
+            actions,
+            text="Rétablir (Ctrl+Y)",
+            command=self.redo,
+            state="disabled",
+        )
+        self.redo_button.grid(row=0, column=1, padx=8, pady=12, sticky="ew")
         ctk.CTkButton(actions, text="Sauvegarder le projet", command=self.save_project_dialog).grid(
-            row=0, column=1, padx=8, pady=12, sticky="ew"
+            row=0, column=2, padx=8, pady=12, sticky="ew"
         )
         ctk.CTkButton(actions, text="Charger un projet", command=self.load_project_dialog).grid(
-            row=0, column=2, padx=8, pady=12, sticky="ew"
+            row=0, column=3, padx=8, pady=12, sticky="ew"
         )
         ctk.CTkButton(
             actions,
@@ -1052,7 +1087,7 @@ class TrackGeneratorApp(ctk.CTk):
             height=46,
             font=ctk.CTkFont(size=18, weight="bold"),
             command=self.generate_dialog,
-        ).grid(row=0, column=3, padx=8, pady=12, sticky="ew")
+        ).grid(row=0, column=4, padx=8, pady=12, sticky="ew")
 
     def add_row(
         self,
@@ -1170,7 +1205,7 @@ class TrackGeneratorApp(ctk.CTk):
         finally:
             self._history_suspended = False
         self.history.reset(self._capture_history_snapshot())
-        self._update_undo_controls()
+        self._update_history_controls()
 
     def clear_command_log(self) -> None:
         """Clear the visible generation log."""

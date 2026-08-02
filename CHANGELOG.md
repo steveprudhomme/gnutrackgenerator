@@ -30,6 +30,26 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 
 - Rien pour le moment.
 
+## [0.5.1] - 2026-08-02
+
+### Ajouté
+
+- Commande **Rétablir** dans le menu **Édition**.
+- Bouton **Rétablir (Ctrl+Y)** dans la barre d’actions principale.
+- Raccourcis `Ctrl+Y` et `Ctrl+Maj+Z`, avec équivalent `Cmd+Maj+Z` sur macOS.
+- Pile de rétablissement indépendante et bornée à 100 états.
+- Tests unitaires couvrant le cycle annuler/rétablir, la divergence après annulation, la réinitialisation et la capacité maximale.
+
+### Changé
+
+- Le gestionnaire `history.py` prend maintenant en charge les piles d’annulation et de rétablissement.
+- Une nouvelle modification après une annulation efface la pile de rétablissement.
+- Passage de la version du projet à `0.5.1`.
+
+### Corrigé
+
+- Les boutons et commandes de menu sont activés ou désactivés selon la disponibilité réelle d’une action à annuler ou à rétablir.
+
 ## [0.5.0] - 2026-08-02
 
 ### Ajouté

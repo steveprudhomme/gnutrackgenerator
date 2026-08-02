@@ -90,11 +90,12 @@ Pour tolérer certaines écritures non standard rencontrées dans des progressio
 
 ## Historique d’édition
 
-- La commande **Annuler** est disponible depuis le menu **Édition**, le bouton principal et le raccourci `Ctrl+Z`.
-- L’historique conserve au maximum 100 états afin de limiter l’utilisation de la mémoire.
+- Les commandes **Annuler** et **Rétablir** sont disponibles depuis le menu **Édition**, les boutons principaux et les raccourcis `Ctrl+Z`, `Ctrl+Y` ou `Ctrl+Maj+Z`.
+- Les piles d’annulation et de rétablissement conservent chacune au maximum 100 états afin de limiter l’utilisation de la mémoire.
+- Toute nouvelle modification après une annulation invalide la pile de rétablissement.
 - Les instantanés utilisent les valeurs brutes de l’interface afin de restaurer aussi les saisies temporairement invalides.
 - Les frappes rapprochées sont regroupées dans une seule étape d’annulation.
-- L’ouverture d’un autre projet `.gen` réinitialise la pile d’annulation.
+- L’ouverture d’un autre projet `.gen` réinitialise les piles d’annulation et de rétablissement.
 - La restauration doit préserver les accords dynamiques et les réglages d’arpégiateur associés.
 
 ## Exigences non fonctionnelles
@@ -112,7 +113,7 @@ Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, 
 ```json
 {
   "app": "GNU TrackGenerator",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "soundfont_path": null,
   "segments": [
     {
