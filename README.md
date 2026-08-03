@@ -1,4 +1,4 @@
-![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.6.3-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
+![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.6.4-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
 
 # GNU TrackGenerator
 
@@ -198,9 +198,14 @@ fluidsynth --version
 Si une commande est introuvable, il faut ajouter le dossier contenant l’exécutable correspondant au `PATH` de Windows.
 
 
-## Fonctionnalités de la version 0.6.3
+## Fonctionnalités de la version 0.6.4
 
-- Commandes **Annuler** et **Rétablir** accessibles depuis le menu **Édition**, les boutons dédiés et les raccourcis `Ctrl+Z`, `Ctrl+Y` ou `Ctrl+Maj+Z`.
+- Menu **Fichier** standard regroupant **Ouvrir…**, **Enregistrer**, **Enregistrer sous…** et **Exporter…**.
+- Raccourcis `Ctrl+O`, `Ctrl+S` et `Ctrl+Maj+S` pour les opérations de projet courantes.
+- **Enregistrer** réutilise le fichier `.gen` courant; pour un nouveau projet, la commande ouvre automatiquement **Enregistrer sous…**.
+- Le fichier courant est mémorisé après une ouverture ou un enregistrement sous, et son nom apparaît dans la barre de titre.
+- **Exporter…** produit les fichiers `.gen`, `.ly`, `.pdf`, `.mid`, `.wav` et `.commands.txt`.
+- Commandes **Annuler** et **Rétablir** accessibles depuis le menu **Édition** et les raccourcis `Ctrl+Z`, `Ctrl+Y` ou `Ctrl+Maj+Z`.
 - Limite des piles Annuler/Rétablir configurable dans **Édition → Options**, avec `100` comme valeur par défaut.
 - Préférence enregistrée entre les sessions dans un fichier de configuration propre à l’application, distinct des projets `.gen`.
 - Une réduction de la limite supprime immédiatement les états les plus anciens tout en conservant les états les plus récents et le projet courant.
@@ -350,7 +355,7 @@ Si l’instrument choisi est **Guitare sèche**, GNU TrackGenerator ajoute aussi
 
 ### Journal de génération et dépannage WAV
 
-Lorsqu’on clique sur **Générer**, l’application affiche maintenant un **journal de génération** directement dans l’interface. Ce journal montre les fichiers écrits et les commandes réellement exécutées pour LilyPond, TiMidity et FluidSynth.
+Lorsqu’on choisit **Fichier → Exporter…**, l’application affiche maintenant un **journal de génération** directement dans l’interface. Ce journal montre les fichiers écrits et les commandes réellement exécutées pour LilyPond, TiMidity et FluidSynth.
 
 Un fichier portant l’extension `.commands.txt` est aussi créé dans le dossier de sortie. Il permet de copier-coller exactement les commandes dans PowerShell pour comprendre ce qui se passe.
 

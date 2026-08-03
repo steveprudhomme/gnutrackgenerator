@@ -75,6 +75,7 @@ class GenerationResult:
 
     gen_path: Path
     lilypond_path: Path
+    pdf_path: Path
     midi_path: Path
     wav_path: Path
     command_log_path: Path
@@ -904,6 +905,10 @@ def generate_project(
         log(f"[fichier écrit] {gen_path}")
         ly_path = write_lilypond_file(project, stem.with_suffix(".ly"), title=stem.name, on_log=log)
         midi_path = compile_lilypond_to_midi(ly_path, stem, lilypond_binary=lilypond_binary, on_log=log)
+        pdf_path = stem.with_suffix(".pdf")
+        if not pdf_path.exists():
+            raise GenerationError("LilyPond a terminé sans produire le fichier PDF attendu.")
+        log(f"[fichier PDF] {pdf_path} ({pdf_path.stat().st_size} octets)")
         wav_path = render_midi_to_wav(
             midi_path,
             stem.with_suffix(".wav"),
@@ -924,6 +929,7 @@ def generate_project(
     return GenerationResult(
         gen_path=gen_path,
         lilypond_path=ly_path,
+        pdf_path=pdf_path,
         midi_path=midi_path,
         wav_path=wav_path,
         command_log_path=command_log_path,

@@ -1000,6 +1000,7 @@ class TrackGeneratorApp(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         self.rows: list[SegmentRow] = []
+        self.current_project_path: Path | None = None
         self.soundfont_var = ctk.StringVar(value="")
         self.click_track_enabled_var = ctk.BooleanVar(value=True)
         self.app_settings = load_app_settings()
@@ -1013,6 +1014,7 @@ class TrackGeneratorApp(ctk.CTk):
 
         self._build_menu()
         self._build_layout()
+        self._update_window_title()
         self.soundfont_var.trace_add("write", lambda *_args: self._schedule_history_record())
         self.click_track_enabled_var.trace_add(
             "write", lambda *_args: self._schedule_history_record()
@@ -1031,10 +1033,43 @@ class TrackGeneratorApp(ctk.CTk):
         self.bind_all("<Control-Shift-Z>", self.redo)
         self.bind_all("<Command-Shift-z>", self.redo)
         self.bind_all("<Command-Shift-Z>", self.redo)
+        self.bind_all("<Control-o>", self.open_project)
+        self.bind_all("<Command-o>", self.open_project)
+        self.bind_all("<Control-s>", self.save_project)
+        self.bind_all("<Command-s>", self.save_project)
+        self.bind_all("<Control-Shift-s>", self.save_project_as)
+        self.bind_all("<Control-Shift-S>", self.save_project_as)
+        self.bind_all("<Command-Shift-s>", self.save_project_as)
+        self.bind_all("<Command-Shift-S>", self.save_project_as)
 
     def _build_menu(self) -> None:
-        """Create the standard Edit menu with Undo and Redo support."""
+        """Create standard File and Edit menus for the desktop application."""
         self.menu_bar = tk.Menu(self)
+
+        self.file_menu = tk.Menu(self.menu_bar, tearoff=False)
+        self.file_menu.add_command(
+            label="Ouvrir…",
+            accelerator="Ctrl+O",
+            command=self.open_project,
+        )
+        self.file_menu.add_separator()
+        self.file_menu.add_command(
+            label="Enregistrer",
+            accelerator="Ctrl+S",
+            command=self.save_project,
+        )
+        self.file_menu.add_command(
+            label="Enregistrer sous…",
+            accelerator="Ctrl+Maj+S",
+            command=self.save_project_as,
+        )
+        self.file_menu.add_separator()
+        self.file_menu.add_command(
+            label="Exporter…",
+            command=self.export_project,
+        )
+        self.menu_bar.add_cascade(label="Fichier", menu=self.file_menu)
+
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.edit_menu.add_command(
             label="Annuler",
@@ -1055,6 +1090,20 @@ class TrackGeneratorApp(ctk.CTk):
         )
         self.menu_bar.add_cascade(label="Édition", menu=self.edit_menu)
         self.configure(menu=self.menu_bar)
+
+    def _update_window_title(self) -> None:
+        """Show the active project file, or a new-project label, in the title bar."""
+        project_name = (
+            self.current_project_path.name
+            if self.current_project_path is not None
+            else "Nouveau projet"
+        )
+        self.title(f"{APP_NAME} {APP_VERSION} — {project_name}")
+
+    def _set_current_project_path(self, path: str | Path | None) -> None:
+        """Store the current .gen path and refresh the application title."""
+        self.current_project_path = Path(path).resolve() if path else None
+        self._update_window_title()
 
     def open_options_dialog(self) -> None:
         """Open persistent application preferences."""
@@ -1128,13 +1177,9 @@ class TrackGeneratorApp(ctk.CTk):
             self._commit_history_snapshot()
 
     def _update_history_controls(self) -> None:
-        """Synchronize Undo/Redo buttons and menu entries with both stacks."""
+        """Synchronize the Undo/Redo menu entries with both history stacks."""
         undo_state = "normal" if self.history.can_undo else "disabled"
         redo_state = "normal" if self.history.can_redo else "disabled"
-        if hasattr(self, "undo_button"):
-            self.undo_button.configure(state=undo_state)
-        if hasattr(self, "redo_button"):
-            self.redo_button.configure(state=redo_state)
         if hasattr(self, "edit_menu"):
             self.edit_menu.entryconfigure(0, state=undo_state)
             self.edit_menu.entryconfigure(1, state=redo_state)
@@ -1252,41 +1297,6 @@ class TrackGeneratorApp(ctk.CTk):
         )
         self.command_log_text.configure(state="disabled")
 
-        actions = ctk.CTkFrame(self)
-        actions.grid(row=5, column=0, padx=18, pady=(6, 18), sticky="ew")
-        actions.grid_columnconfigure(0, weight=1)
-        actions.grid_columnconfigure(1, weight=1)
-        actions.grid_columnconfigure(2, weight=1)
-        actions.grid_columnconfigure(3, weight=1)
-        actions.grid_columnconfigure(4, weight=2)
-
-        self.undo_button = ctk.CTkButton(
-            actions,
-            text="Annuler (Ctrl+Z)",
-            command=self.undo,
-            state="disabled",
-        )
-        self.undo_button.grid(row=0, column=0, padx=8, pady=12, sticky="ew")
-        self.redo_button = ctk.CTkButton(
-            actions,
-            text="Rétablir (Ctrl+Y)",
-            command=self.redo,
-            state="disabled",
-        )
-        self.redo_button.grid(row=0, column=1, padx=8, pady=12, sticky="ew")
-        ctk.CTkButton(actions, text="Sauvegarder le projet", command=self.save_project_dialog).grid(
-            row=0, column=2, padx=8, pady=12, sticky="ew"
-        )
-        ctk.CTkButton(actions, text="Charger un projet", command=self.load_project_dialog).grid(
-            row=0, column=3, padx=8, pady=12, sticky="ew"
-        )
-        ctk.CTkButton(
-            actions,
-            text="Générer",
-            height=46,
-            font=ctk.CTkFont(size=18, weight="bold"),
-            command=self.generate_dialog,
-        ).grid(row=0, column=4, padx=8, pady=12, sticky="ew")
 
     def add_row(
         self,
@@ -1426,43 +1436,77 @@ class TrackGeneratorApp(ctk.CTk):
         project.validate()
         return project
 
-    def save_project_dialog(self) -> None:
-        """Save the current GUI state as .gen."""
+    def _write_project_file(self, project: ProjectData, path: str | Path) -> bool:
+        """Write one validated project, remember its path, and report errors."""
+        target = Path(path)
+        try:
+            save_project(project, target)
+        except OSError as exc:
+            messagebox.showerror("Erreur", f"Impossible de sauvegarder le projet:\n{exc}")
+            return False
+        self._set_current_project_path(target)
+        messagebox.showinfo(APP_NAME, f"Projet sauvegardé:\n{target}")
+        return True
+
+    def save_project(self, _event=None):
+        """Save to the current .gen file, or delegate to Save As for a new project."""
+        self._flush_pending_history()
+        if self.current_project_path is None:
+            return self.save_project_as(_event)
         try:
             project = self.collect_project()
         except ValidationError as exc:
             messagebox.showerror("Validation", str(exc))
-            return
+            return "break" if _event is not None else None
+        self._write_project_file(project, self.current_project_path)
+        return "break" if _event is not None else None
 
-        path = filedialog.asksaveasfilename(
-            title="Sauvegarder le projet",
-            defaultextension=".gen",
-            filetypes=[("GNU TrackGenerator", "*.gen"), ("JSON", "*.json"), ("Tous les fichiers", "*.*")],
-        )
-        if not path:
-            return
-
+    def save_project_as(self, _event=None):
+        """Choose a .gen destination and make it the current project file."""
+        self._flush_pending_history()
         try:
-            save_project(project, path)
-        except OSError as exc:
-            messagebox.showerror("Erreur", f"Impossible de sauvegarder le projet:\n{exc}")
-            return
-        messagebox.showinfo(APP_NAME, f"Projet sauvegardé:\n{path}")
+            project = self.collect_project()
+        except ValidationError as exc:
+            messagebox.showerror("Validation", str(exc))
+            return "break" if _event is not None else None
 
-    def load_project_dialog(self) -> None:
-        """Load a .gen project and replace the current rows."""
+        initial_file = (
+            self.current_project_path.name
+            if self.current_project_path is not None
+            else "nouveau-projet.gen"
+        )
+        path = filedialog.asksaveasfilename(
+            title="Enregistrer le projet sous",
+            initialfile=initial_file,
+            defaultextension=".gen",
+            filetypes=[
+                ("GNU TrackGenerator", "*.gen"),
+                ("JSON", "*.json"),
+                ("Tous les fichiers", "*.*"),
+            ],
+        )
+        if path:
+            self._write_project_file(project, path)
+        return "break" if _event is not None else None
+
+    def open_project(self, _event=None):
+        """Open a .gen project, replace the GUI state, and reset history."""
         path = filedialog.askopenfilename(
-            title="Charger un projet",
-            filetypes=[("GNU TrackGenerator", "*.gen"), ("JSON", "*.json"), ("Tous les fichiers", "*.*")],
+            title="Ouvrir un projet",
+            filetypes=[
+                ("GNU TrackGenerator", "*.gen"),
+                ("JSON", "*.json"),
+                ("Tous les fichiers", "*.*"),
+            ],
         )
         if not path:
-            return
+            return "break" if _event is not None else None
 
         try:
             project = load_project(path)
         except Exception as exc:  # JSON errors, validation errors, OS errors.
             messagebox.showerror("Erreur", f"Impossible de charger le projet:\n{exc}")
-            return
+            return "break" if _event is not None else None
 
         self._history_suspended = True
         try:
@@ -1475,8 +1519,10 @@ class TrackGeneratorApp(ctk.CTk):
                 self.add_row(defaults=segment, record_history=False)
         finally:
             self._history_suspended = False
+        self._set_current_project_path(path)
         self.history.reset(self._capture_history_snapshot())
         self._update_history_controls()
+        return "break" if _event is not None else None
 
     def clear_command_log(self) -> None:
         """Clear the visible generation log."""
@@ -1492,26 +1538,32 @@ class TrackGeneratorApp(ctk.CTk):
         self.command_log_text.configure(state="disabled")
         self.update_idletasks()
 
-    def generate_dialog(self) -> None:
-        """Ask output options and run the local generation pipeline."""
+    def export_project(self, _event=None):
+        """Export .gen, LilyPond, PDF, MIDI, WAV, and command-log files."""
+        self._flush_pending_history()
         try:
             project = self.collect_project()
         except ValidationError as exc:
             messagebox.showerror("Validation", str(exc))
-            return
+            return "break" if _event is not None else None
 
-        output_dir = filedialog.askdirectory(title="Choisir le répertoire de sortie")
+        output_dir = filedialog.askdirectory(title="Choisir le répertoire d’exportation")
         if not output_dir:
-            return
+            return "break" if _event is not None else None
 
+        default_base_name = (
+            self.current_project_path.stem
+            if self.current_project_path is not None
+            else "gnu_trackgenerator_click"
+        )
         dialog = ctk.CTkInputDialog(
-            title="Nom du fichier",
+            title="Nom des fichiers exportés",
             text="Nom de base des fichiers générés:",
         )
-        base_name = dialog.get_input() or "gnu_trackgenerator_click"
+        base_name = dialog.get_input() or default_base_name
 
         self.clear_command_log()
-        self.append_command_log("Démarrage de la génération...")
+        self.append_command_log("Démarrage de l’exportation...")
 
         try:
             result = generate_project(
@@ -1522,20 +1574,32 @@ class TrackGeneratorApp(ctk.CTk):
             )
         except GenerationError as exc:
             messagebox.showerror("Erreur de génération", str(exc))
-            return
+            return "break" if _event is not None else None
         except OSError as exc:
             messagebox.showerror("Erreur système", str(exc))
-            return
+            return "break" if _event is not None else None
 
         messagebox.showinfo(
             APP_NAME,
-            "Génération terminée:\n"
+            "Exportation terminée:\n"
             f"• {result.gen_path}\n"
             f"• {result.lilypond_path}\n"
+            f"• {result.pdf_path}\n"
             f"• {result.midi_path}\n"
             f"• {result.wav_path}\n"
             f"• Journal: {result.command_log_path}",
         )
+        return "break" if _event is not None else None
+
+    # Backward-compatible method names retained for external callers and old tests.
+    def save_project_dialog(self) -> None:
+        self.save_project_as()
+
+    def load_project_dialog(self) -> None:
+        self.open_project()
+
+    def generate_dialog(self) -> None:
+        self.export_project()
 
 
 def main() -> None:

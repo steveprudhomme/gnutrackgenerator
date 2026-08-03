@@ -21,7 +21,7 @@ from .rhythm import (
 )
 
 APP_NAME = "GNU TrackGenerator"
-APP_VERSION = "0.6.3"
+APP_VERSION = "0.6.4"
 
 # LilyPond note durations are represented by powers of two: 1, 2, 4, 8, 16...
 SUPPORTED_DENOMINATORS = {1, 2, 4, 8, 16, 32, 64}

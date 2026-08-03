@@ -124,19 +124,30 @@ Consulter `SUPPORT.md` avant d’ouvrir un ticket. Pour signaler un bogue, utili
 
 ## Annuler ou rétablir une modification
 
-La version 0.6.3 propose les deux directions de l’historique d’édition et l’organisation interactive de la séquence.
+La version 0.6.4 propose les deux directions de l’historique d’édition et l’organisation interactive de la séquence.
+
+### Menu Fichier
+
+Les opérations de projet sont regroupées dans **Fichier** :
+
+- **Ouvrir…** (`Ctrl+O`) charge un fichier `.gen`;
+- **Enregistrer** (`Ctrl+S`) sauvegarde dans le fichier courant;
+- **Enregistrer sous…** (`Ctrl+Maj+S`) choisit un nouveau fichier et en fait le fichier courant;
+- **Exporter…** génère `.gen`, `.ly`, `.pdf`, `.mid`, `.wav` et `.commands.txt`.
+
+Pour un nouveau projet qui n’a pas encore de fichier, **Enregistrer** ouvre automatiquement **Enregistrer sous…**. Le nom du fichier courant apparaît dans la barre de titre.
 
 Pour **annuler** :
 
 - menu **Édition → Annuler**;
-- bouton **Annuler (Ctrl+Z)** au bas de la fenêtre;
 - raccourci clavier `Ctrl+Z`.
 
 Pour **rétablir** une action annulée :
 
 - menu **Édition → Rétablir**;
-- bouton **Rétablir (Ctrl+Y)** au bas de la fenêtre;
 - raccourci clavier `Ctrl+Y` ou `Ctrl+Maj+Z`.
+
+Les anciens boutons Annuler et Rétablir ont été retirés de la barre inférieure afin d’alléger l’interface; les commandes demeurent entièrement accessibles dans le menu et au clavier.
 
 L’historique couvre explicitement :
 
@@ -247,7 +258,7 @@ Si TiMidity est installé, il sera essayé en priorité. Lorsqu’un SoundFont e
 
 ### Journal de génération et dépannage WAV
 
-Lorsqu’on clique sur **Générer**, l’application affiche maintenant un **journal de génération** directement dans l’interface. Ce journal montre les fichiers écrits et les commandes réellement exécutées pour LilyPond, TiMidity et FluidSynth.
+Lorsqu’on choisit **Fichier → Exporter…**, l’application affiche maintenant un **journal de génération** directement dans l’interface. Ce journal montre les fichiers écrits et les commandes réellement exécutées pour LilyPond, TiMidity et FluidSynth.
 
 Un fichier portant l’extension `.commands.txt` est aussi créé dans le dossier de sortie. Il permet de copier-coller exactement les commandes dans PowerShell pour comprendre ce qui se passe.
 

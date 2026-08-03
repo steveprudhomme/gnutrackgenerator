@@ -46,16 +46,23 @@ Les versions et leur contenu restent indicatifs. Une fonctionnalité peut être 
 
 ### 2. Menu **Fichier**
 
-Regrouper les commandes de projet dans un menu standard :
-
-- **Ouvrir…** : charger un projet `.gen`;
-- **Enregistrer** : sauvegarder dans le fichier courant;
-- **Enregistrer sous…** : choisir un nouveau nom ou emplacement;
-- **Exporter…** : générer les fichiers `.ly`, `.pdf`, `.mid`, `.wav` et les journaux;
-- prévoir les raccourcis habituels lorsque pertinents :
-  - `Ctrl+O`;
-  - `Ctrl+S`;
-  - `Ctrl+Maj+S`.
+- ✅ **Réalisé en v0.6.4** — menu standard regroupant :
+  - **Ouvrir…** pour charger un projet `.gen`;
+  - **Enregistrer** pour sauvegarder dans le fichier courant;
+  - **Enregistrer sous…** pour choisir un nouveau nom ou emplacement;
+  - **Exporter…** pour générer les fichiers `.gen`, `.ly`, `.pdf`, `.mid`, `.wav` et les journaux.
+- ✅ **Réalisé en v0.6.4** — raccourcis `Ctrl+O`, `Ctrl+S` et `Ctrl+Maj+S`, avec équivalents macOS.
+- ✅ **Réalisé en v0.6.4** — mémorisation du fichier courant après ouverture ou enregistrement sous.
+- Ajouter la commande **Quitter** à la fin du menu **Fichier** :
+  - prévoir le raccourci usuel `Alt+F4` sous Windows/Linux et `Cmd+Q` sur macOS lorsque pertinent;
+  - fermer directement lorsque le projet ne contient aucune modification non enregistrée;
+  - utiliser exactement la même procédure lorsque l’utilisateur clique sur le bouton de fermeture `X` de la fenêtre.
+- Avant toute fermeture d’un projet modifié, afficher une boîte de dialogue proposant :
+  - **Enregistrer** : sauvegarder dans le fichier courant, ou ouvrir **Enregistrer sous…** pour un nouveau projet, puis quitter uniquement si la sauvegarde réussit;
+  - **Ne pas enregistrer** : quitter sans écrire les changements;
+  - **Annuler** : interrompre complètement la fermeture et revenir au projet.
+- Empêcher la fermeture si l’utilisateur annule le sélecteur de fichier ou si la sauvegarde échoue.
+- Centraliser le traitement de fermeture dans une seule méthode appelée par **Fichier → Quitter**, `Alt+F4`/`Cmd+Q` et le protocole de fenêtre `WM_DELETE_WINDOW`.
 
 ### 3. Nom du projet dans la barre de titre
 
@@ -400,6 +407,13 @@ où `D` signifie *downstroke*, `U` *upstroke* et `-` une absence d’attaque.
 - Intégration à l’historique Annuler/Rétablir.
 
 ---
+
+## v0.6.4 — Menu Fichier standard
+
+- Commandes Ouvrir, Enregistrer, Enregistrer sous et Exporter regroupées dans le menu Fichier.
+- Raccourcis clavier usuels pour l’ouverture et la sauvegarde.
+- Suivi du fichier `.gen` courant et titre de fenêtre mis à jour.
+- Suppression des anciens boutons de projet redondants.
 
 # Idées à plus long terme
 

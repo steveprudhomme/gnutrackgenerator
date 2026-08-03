@@ -8,11 +8,11 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 
 ### Ajouté
 
-- Rien pour le moment.
+- Planification dans `ROADMAP.md` d’une commande **Fichier → Quitter** et d’une fermeture sécurisée commune au menu et au bouton `X`, avec choix **Enregistrer**, **Ne pas enregistrer** ou **Annuler**.
 
 ### Changé
 
-- Rien pour le moment.
+- Retrait des boutons redondants **Annuler** et **Rétablir** de la barre inférieure; les commandes restent disponibles dans le menu **Édition** et par leurs raccourcis clavier.
 
 ### Déprécié
 
@@ -29,6 +29,27 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 ### Sécurité
 
 - Rien pour le moment.
+
+## [0.6.4] - 2026-08-02
+
+### Ajouté
+
+- Menu **Fichier** standard avec les commandes **Ouvrir…**, **Enregistrer**, **Enregistrer sous…** et **Exporter…**.
+- Raccourcis `Ctrl+O`, `Ctrl+S` et `Ctrl+Maj+S`, avec équivalents `Command` sur macOS.
+- Suivi du chemin du projet `.gen` courant et affichage de son nom dans la barre de titre.
+- Tests de non-régression dédiés au menu Fichier, aux raccourcis et au comportement Enregistrer/Enregistrer sous.
+
+### Changé
+
+- **Enregistrer** écrit désormais directement dans le fichier courant et délègue à **Enregistrer sous…** lorsqu’aucun chemin n’est encore associé au projet.
+- Les anciens boutons **Sauvegarder le projet**, **Charger un projet** et **Générer** ont été retirés de la barre inférieure au profit du menu standard.
+- La commande de génération est renommée **Exporter…** et conserve la production des fichiers `.gen`, `.ly`, `.pdf`, `.mid`, `.wav` et `.commands.txt`.
+- Le nom de base proposé à l’export provient du fichier `.gen` courant lorsqu’il existe.
+- Passage de la version du projet à `0.6.4`.
+
+### Corrigé
+
+- La sauvegarde d’un projet déjà ouvert ne demande plus systématiquement un nouvel emplacement.
 
 ## [0.6.3] - 2026-08-02
 

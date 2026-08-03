@@ -52,6 +52,11 @@ GNU TrackGenerator génère des pistes de métronome programmables et reproducti
 - `REQ-037` — La limite vaut `100` par défaut et accepte une valeur entière de `1` à `10000`.
 - `REQ-038` — La préférence de limite est persistée entre les sessions dans un fichier de configuration distinct du projet `.gen`.
 - `REQ-039` — Réduire la limite supprime immédiatement les états les plus anciens de chacune des deux piles sans modifier l’état courant.
+- `REQ-040` — Le menu **Fichier** expose **Ouvrir…**, **Enregistrer**, **Enregistrer sous…** et **Exporter…**.
+- `REQ-041` — `Ctrl+O`, `Ctrl+S` et `Ctrl+Maj+S` déclenchent respectivement l’ouverture, l’enregistrement courant et l’enregistrement sous.
+- `REQ-042` — **Enregistrer** utilise le chemin `.gen` courant et ouvre **Enregistrer sous…** lorsqu’aucun chemin n’est associé au projet.
+- `REQ-043` — Une ouverture ou un enregistrement sous met à jour le chemin courant et le nom affiché dans la barre de titre.
+- `REQ-044` — **Exporter…** produit `.gen`, `.ly`, `.pdf`, `.mid`, `.wav` et le journal `.commands.txt` sans modifier le chemin du projet courant.
 
 ## Accords supportés
 
@@ -98,7 +103,7 @@ Pour tolérer certaines écritures non standard rencontrées dans des progressio
 
 ## Historique d’édition
 
-- Les commandes **Annuler** et **Rétablir** sont disponibles depuis le menu **Édition**, les boutons principaux et les raccourcis `Ctrl+Z`, `Ctrl+Y` ou `Ctrl+Maj+Z`.
+- Les commandes **Annuler** et **Rétablir** sont disponibles depuis le menu **Édition** et les raccourcis `Ctrl+Z`, `Ctrl+Y` ou `Ctrl+Maj+Z`; aucun bouton redondant n’est affiché dans la barre inférieure.
 - Les piles d’annulation et de rétablissement conservent chacune au maximum le nombre d’états configuré dans **Édition → Options**; la valeur par défaut est `100`.
 - La limite acceptée va de `1` à `10000`; l’interface explique qu’une valeur élevée peut augmenter la consommation de mémoire.
 - La préférence est persistée hors du fichier `.gen` et restaurée au prochain démarrage de l’application.
@@ -110,6 +115,15 @@ Pour tolérer certaines écritures non standard rencontrées dans des progressio
 - La restauration doit préserver les accords dynamiques et les réglages d’arpégiateur associés.
 - Le schéma d’instantané doit obligatoirement contenir les valeurs de tempo, signature, mesures, mode d’accord, accords, instruments, grilles et arpégiateurs de chaque ligne, ainsi que le SoundFont et l’état global du click track.
 - Les tests de non-régression doivent couvrir l’ajout, la suppression, la duplication, le déplacement, les modifications musicales et le commutateur global du click track dans les deux directions Annuler/Rétablir.
+
+## Gestion des fichiers de projet
+
+- L’application conserve en mémoire le chemin du fichier `.gen` courant après une ouverture ou un enregistrement sous.
+- La commande **Enregistrer** écrit dans ce chemin sans demander un nouvel emplacement.
+- La commande **Enregistrer sous…** met à jour le chemin courant uniquement après une écriture réussie.
+- La commande **Ouvrir…** remplace l’état de l’interface, restaure le SoundFont et le click track, puis réinitialise Annuler/Rétablir.
+- La commande **Exporter…** génère les artefacts musicaux dans un dossier choisi et ne change pas le fichier `.gen` courant.
+- Le nom du fichier courant, ou **Nouveau projet**, est affiché dans la barre de titre.
 
 ## Exigences non fonctionnelles
 
@@ -131,7 +145,7 @@ Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, 
 ```json
 {
   "app": "GNU TrackGenerator",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "soundfont_path": null,
   "click_track_enabled": true,
   "segments": [
