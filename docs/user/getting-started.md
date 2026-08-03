@@ -124,7 +124,7 @@ Consulter `SUPPORT.md` avant d’ouvrir un ticket. Pour signaler un bogue, utili
 
 ## Annuler ou rétablir une modification
 
-La version 0.6.1 propose les deux directions de l’historique d’édition et l’organisation interactive de la séquence.
+La version 0.6.2 propose les deux directions de l’historique d’édition et l’organisation interactive de la séquence.
 
 Pour **annuler** :
 
@@ -138,7 +138,17 @@ Pour **rétablir** une action annulée :
 - bouton **Rétablir (Ctrl+Y)** au bas de la fenêtre;
 - raccourci clavier `Ctrl+Y` ou `Ctrl+Maj+Z`.
 
-L’historique couvre notamment les champs de tempo et de signature, les accords, les réglages d’arpégiateur, le SoundFont ainsi que l’ajout et la suppression de lignes. Les frappes rapprochées sont regroupées pour qu’un mot ou une valeur puisse être annulé en une seule étape plutôt qu’un caractère à la fois.
+L’historique couvre explicitement :
+
+- l’ajout et la suppression d’une ligne;
+- le tempo, la signature et le nombre de mesures;
+- les accords et le mode d’accord;
+- les réglages d’arpégiateur;
+- la duplication et le déplacement des lignes;
+- l’activation ou la désactivation globale du click track;
+- le SoundFont.
+
+Les frappes rapprochées sont regroupées pour qu’un mot ou une valeur puisse être annulé en une seule étape plutôt qu’un caractère à la fois.
 
 Après une annulation, toute nouvelle modification efface les états qui auraient pu être rétablis. Lorsqu’un autre projet `.gen` est ouvert, les deux piles sont réinitialisées afin d’éviter de restaurer accidentellement le projet précédent.
 

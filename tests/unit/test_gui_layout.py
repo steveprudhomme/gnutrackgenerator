@@ -33,7 +33,7 @@ class SegmentRowLayoutTests(unittest.TestCase):
     def test_global_click_track_switch_is_present(self) -> None:
         self.assertIn('text="Click track du projet"', self.source)
         self.assertIn('variable=self.click_track_enabled_var', self.source)
-        self.assertIn('"click_track_enabled": bool(self.click_track_enabled_var.get())', self.source)
+        self.assertIn("click_track_enabled=bool(self.click_track_enabled_var.get())", self.source)
 
 
 if __name__ == "__main__":

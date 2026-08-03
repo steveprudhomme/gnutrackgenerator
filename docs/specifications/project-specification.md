@@ -101,6 +101,8 @@ Pour tolérer certaines écritures non standard rencontrées dans des progressio
 - Les frappes rapprochées sont regroupées dans une seule étape d’annulation.
 - L’ouverture d’un autre projet `.gen` réinitialise les piles d’annulation et de rétablissement.
 - La restauration doit préserver les accords dynamiques et les réglages d’arpégiateur associés.
+- Le schéma d’instantané doit obligatoirement contenir les valeurs de tempo, signature, mesures, mode d’accord, accords, instruments, grilles et arpégiateurs de chaque ligne, ainsi que le SoundFont et l’état global du click track.
+- Les tests de non-régression doivent couvrir l’ajout, la suppression, la duplication, le déplacement, les modifications musicales et le commutateur global du click track dans les deux directions Annuler/Rétablir.
 
 ## Exigences non fonctionnelles
 
@@ -122,7 +124,7 @@ Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, 
 ```json
 {
   "app": "GNU TrackGenerator",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "soundfont_path": null,
   "click_track_enabled": true,
   "segments": [

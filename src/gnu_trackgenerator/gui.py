@@ -27,6 +27,11 @@ from .arpeggiator import (
 from .chords import ChordParseError, SUPPORTED_CHORD_EXAMPLES, chord_symbol_to_lilypond_chord
 from .generator import GenerationError, generate_project
 from .history import UndoHistory
+from .history_snapshot import (
+    build_project_history_snapshot,
+    validate_project_history_snapshot,
+    validate_row_history_state,
+)
 from .sequence import duplicate_row_state, move_item
 from .models import (
     APP_NAME,
@@ -280,21 +285,23 @@ class SegmentRow(ctk.CTkFrame):
 
     def to_history_state(self) -> dict:
         """Return an unvalidated, JSON-like snapshot of the editable row state."""
-        return {
-            "bpm": self.bpm_var.get(),
-            "numerator": self.numerator_var.get(),
-            "denominator": self.denominator_var.get(),
-            "measures": self.measures_var.get(),
-            "chord_mode": self.chord_mode,
-            "chord_symbol": self.chord_symbol_var.get(),
-            "chord_instrument_label": self.chord_instrument_var.get(),
-            "chord_grid_unit_label": self.chord_grid_unit_var.get(),
-            "measure_chords": [variable.get() for variable in self.measure_chord_vars],
-            "grid_chords": [variable.get() for variable in self.grid_chord_vars],
-            "line_arpeggiator": self.line_arpeggiator.to_dict(),
-            "measure_arpeggiators": [settings.to_dict() for settings in self.measure_arpeggiators],
-            "grid_arpeggiators": [settings.to_dict() for settings in self.grid_arpeggiators],
-        }
+        return validate_row_history_state(
+            {
+                "bpm": self.bpm_var.get(),
+                "numerator": self.numerator_var.get(),
+                "denominator": self.denominator_var.get(),
+                "measures": self.measures_var.get(),
+                "chord_mode": self.chord_mode,
+                "chord_symbol": self.chord_symbol_var.get(),
+                "chord_instrument_label": self.chord_instrument_var.get(),
+                "chord_grid_unit_label": self.chord_grid_unit_var.get(),
+                "measure_chords": [variable.get() for variable in self.measure_chord_vars],
+                "grid_chords": [variable.get() for variable in self.grid_chord_vars],
+                "line_arpeggiator": self.line_arpeggiator.to_dict(),
+                "measure_arpeggiators": [settings.to_dict() for settings in self.measure_arpeggiators],
+                "grid_arpeggiators": [settings.to_dict() for settings in self.grid_arpeggiators],
+            }
+        )
 
     def apply_history_state(self, state: dict) -> None:
         """Restore a snapshot created by :meth:`to_history_state`."""
@@ -952,11 +959,11 @@ class TrackGeneratorApp(ctk.CTk):
 
     def _capture_history_snapshot(self) -> dict:
         """Capture raw GUI values, including temporarily invalid input."""
-        return {
-            "soundfont": self.soundfont_var.get(),
-            "click_track_enabled": bool(self.click_track_enabled_var.get()),
-            "rows": [row.to_history_state() for row in self.rows],
-        }
+        return build_project_history_snapshot(
+            soundfont=self.soundfont_var.get(),
+            click_track_enabled=bool(self.click_track_enabled_var.get()),
+            rows=[row.to_history_state() for row in self.rows],
+        )
 
     def _schedule_history_record(self) -> None:
         """Debounce keyboard edits so one typed value becomes one undo step."""
@@ -997,6 +1004,7 @@ class TrackGeneratorApp(ctk.CTk):
 
     def _restore_history_snapshot(self, snapshot: dict) -> None:
         """Replace the GUI state without creating another history entry."""
+        snapshot = validate_project_history_snapshot(snapshot)
         self._history_suspended = True
         try:
             for row in self.rows:

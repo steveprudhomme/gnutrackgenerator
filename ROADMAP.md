@@ -26,14 +26,15 @@ Les versions et leur contenu restent indicatifs. Une fonctionnalité peut être 
 - ✅ **Réalisé en v0.5.0** — commande **Annuler** avec le raccourci `Ctrl+Z`.
 - ✅ **Réalisé en v0.5.1** — commande **Rétablir** avec `Ctrl+Y` ou `Ctrl+Maj+Z`.
 - ✅ **Réalisé en v0.5.0** — centralisation des modifications dans un historique réversible borné à 100 états.
-- Couvrir progressivement les actions suivantes :
+- ✅ **Vérifié et couvert en v0.6.2** — Annuler/Rétablir pour :
   - ajout et suppression d’une ligne;
   - modification du tempo, de la signature et du nombre de mesures;
   - modification des accords;
   - changement du mode d’accord;
   - réglages d’arpégiateur;
   - duplication et déplacement de lignes;
-  - activation ou désactivation du click track.
+  - activation ou désactivation globale du click track.
+- ✅ **Réalisé en v0.6.2** — validation centralisée du schéma des instantanés et tests empêchant l’oubli silencieux d’un champ éditable.
 - ✅ **Réalisé en v0.5.0** — historique limité à 100 états pour maîtriser la mémoire.
 - ✅ **Réalisé en v0.5.0** — réinitialisation de l’historique lors de l’ouverture d’un autre projet.
 - Rendre la limite de l’historique configurable dans **Édition → Options** :
@@ -375,6 +376,13 @@ où `D` signifie *downstroke*, `U` *upstroke* et `-` une absence d’attaque.
 - Déplacement des lignes par cliquer-glisser avec une poignée dédiée.
 - Ordre de séquence conservé dans les sauvegardes et les exports.
 - Compatibilité complète avec Annuler et Rétablir.
+
+## v0.6.2 — Consolidation Annuler/Rétablir
+
+- Validation explicite des instantanés de projet et de ligne.
+- Couverture automatisée de toutes les actions éditables annoncées.
+- Vérification du branchement des champs, modes, arpégiateurs et actions structurelles vers l’historique.
+- Détection immédiate des instantanés incomplets avant restauration.
 
 ## v0.6.1 — Activation globale du click track
 

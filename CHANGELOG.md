@@ -30,6 +30,24 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 
 - Rien pour le moment.
 
+## [0.6.2] - 2026-08-02
+
+### Ajouté
+
+- Module `history_snapshot.py` définissant et validant explicitement le schéma des instantanés Annuler/Rétablir.
+- Tests de non-régression couvrant séparément l’ajout et la suppression de lignes, le tempo, la signature, les mesures, les accords, le mode d’accord, les arpégiateurs, la duplication, le déplacement et le click track global.
+- Tests statiques vérifiant le branchement des événements de l’interface vers l’historique.
+
+### Changé
+
+- La capture et la restauration de l’historique passent maintenant par une validation centralisée avant d’être enregistrées ou appliquées.
+- Passage de la version du projet à `0.6.2`.
+
+### Corrigé
+
+- Une future régression qui omettrait un champ éditable de l’historique est maintenant détectée immédiatement par validation et par tests.
+- La couverture Annuler/Rétablir est confirmée pour toutes les actions annoncées dans la feuille de route.
+
 ## [0.6.1] - 2026-08-02
 
 ### Ajouté
