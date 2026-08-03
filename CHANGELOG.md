@@ -30,6 +30,27 @@ Le format est basé sur **Keep a Changelog** et le projet suit le **Versionnage 
 
 - Rien pour le moment.
 
+## [0.6.3] - 2026-08-02
+
+### Ajouté
+
+- Fenêtre **Édition → Options** permettant de configurer le nombre maximal d’états conservés par Annuler et Rétablir.
+- Module `settings.py` pour les préférences persistantes propres à l’application.
+- Fichier de configuration JSON enregistré dans le répertoire utilisateur approprié au système d’exploitation.
+- Tests de persistance, de validation et de redimensionnement des piles d’historique.
+
+### Changé
+
+- La limite de l’historique utilise `100` comme valeur par défaut, mais peut maintenant être réglée de `1` à `10000`.
+- La préférence est restaurée automatiquement au démarrage et demeure distincte du format de projet `.gen`.
+- Réduire la limite supprime immédiatement les états les plus anciens des piles Annuler et Rétablir, sans modifier l’état courant.
+- Le dialogue Options explique l’incidence potentielle d’une limite élevée sur l’utilisation de la mémoire.
+- Passage de la version du projet à `0.6.3`.
+
+### Corrigé
+
+- La capacité de l’historique n’est plus figée à 100 états dans le code de l’interface.
+
 ## [0.6.2] - 2026-08-02
 
 ### Ajouté

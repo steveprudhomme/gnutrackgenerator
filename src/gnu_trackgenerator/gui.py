@@ -33,6 +33,16 @@ from .history_snapshot import (
     validate_row_history_state,
 )
 from .sequence import duplicate_row_state, move_item
+from .settings import (
+    AppSettings,
+    DEFAULT_HISTORY_LIMIT,
+    MAX_HISTORY_LIMIT,
+    MIN_HISTORY_LIMIT,
+    SettingsError,
+    load_app_settings,
+    save_app_settings,
+    validate_history_limit,
+)
 from .models import (
     APP_NAME,
     APP_VERSION,
@@ -185,6 +195,87 @@ class ArpeggiatorDialog(ctk.CTkToplevel):
             return
         self.on_save(settings)
         self.destroy()
+
+
+class OptionsDialog(ctk.CTkToplevel):
+    """Modal editor for preferences that persist between sessions."""
+
+    def __init__(self, master, history_limit: int, on_save) -> None:
+        super().__init__(master)
+        self.title("Options")
+        self.geometry("590x350")
+        self.resizable(False, False)
+        self.transient(master)
+        self.grab_set()
+        self.on_save = on_save
+        self.history_limit_var = ctk.StringVar(value=str(history_limit))
+
+        self.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            self,
+            text="Options de l’application",
+            font=ctk.CTkFont(size=21, weight="bold"),
+        ).grid(row=0, column=0, padx=24, pady=(22, 8), sticky="w")
+
+        history_frame = ctk.CTkFrame(self)
+        history_frame.grid(row=1, column=0, padx=24, pady=10, sticky="ew")
+        history_frame.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(
+            history_frame,
+            text="Nombre maximal d’états de l’historique",
+            font=ctk.CTkFont(weight="bold"),
+        ).grid(row=0, column=0, padx=14, pady=(14, 8), sticky="w")
+        ctk.CTkEntry(
+            history_frame,
+            textvariable=self.history_limit_var,
+            width=120,
+        ).grid(row=0, column=1, padx=14, pady=(14, 8), sticky="w")
+
+        ctk.CTkLabel(
+            history_frame,
+            text=(
+                f"Valeur par défaut : {DEFAULT_HISTORY_LIMIT}. Valeurs permises : "
+                f"{MIN_HISTORY_LIMIT} à {MAX_HISTORY_LIMIT}. Une limite élevée conserve "
+                "davantage d’états, mais peut utiliser plus de mémoire, surtout dans les "
+                "projets contenant beaucoup de lignes, d’accords et d’arpégiateurs. "
+                "Réduire la limite supprime immédiatement les états les plus anciens."
+            ),
+            wraplength=520,
+            justify="left",
+            font=ctk.CTkFont(size=12),
+        ).grid(row=1, column=0, columnspan=2, padx=14, pady=(4, 14), sticky="w")
+
+        ctk.CTkLabel(
+            self,
+            text="Cette préférence est enregistrée sur cet ordinateur et ne fait pas partie du fichier .gen.",
+            wraplength=540,
+            justify="left",
+            font=ctk.CTkFont(size=12),
+        ).grid(row=2, column=0, padx=24, pady=(4, 12), sticky="w")
+
+        actions = ctk.CTkFrame(self, fg_color="transparent")
+        actions.grid(row=3, column=0, padx=24, pady=(8, 22), sticky="ew")
+        actions.grid_columnconfigure(0, weight=1)
+        actions.grid_columnconfigure(1, weight=1)
+        ctk.CTkButton(actions, text="Annuler", command=self.destroy).grid(
+            row=0, column=0, padx=(0, 6), sticky="ew"
+        )
+        ctk.CTkButton(actions, text="Enregistrer", command=self._save).grid(
+            row=0, column=1, padx=(6, 0), sticky="ew"
+        )
+
+        self.protocol("WM_DELETE_WINDOW", self.destroy)
+        self.after(50, self.focus_force)
+
+    def _save(self) -> None:
+        try:
+            history_limit = validate_history_limit(self.history_limit_var.get())
+        except SettingsError as exc:
+            messagebox.showerror("Options", str(exc), parent=self)
+            return
+        if self.on_save(history_limit) is not False:
+            self.destroy()
 
 
 class SegmentRow(ctk.CTkFrame):
@@ -911,7 +1002,10 @@ class TrackGeneratorApp(ctk.CTk):
         self.rows: list[SegmentRow] = []
         self.soundfont_var = ctk.StringVar(value="")
         self.click_track_enabled_var = ctk.BooleanVar(value=True)
-        self.history: UndoHistory[dict] = UndoHistory(max_entries=100)
+        self.app_settings = load_app_settings()
+        self.history: UndoHistory[dict] = UndoHistory(
+            max_entries=self.app_settings.history_limit
+        )
         self._history_suspended = True
         self._history_after_id: str | None = None
         self._dragged_row: SegmentRow | None = None
@@ -954,8 +1048,51 @@ class TrackGeneratorApp(ctk.CTk):
             command=self.redo,
             state="disabled",
         )
+        self.edit_menu.add_separator()
+        self.edit_menu.add_command(
+            label="Options…",
+            command=self.open_options_dialog,
+        )
         self.menu_bar.add_cascade(label="Édition", menu=self.edit_menu)
         self.configure(menu=self.menu_bar)
+
+    def open_options_dialog(self) -> None:
+        """Open persistent application preferences."""
+        self._flush_pending_history()
+        OptionsDialog(
+            self,
+            history_limit=self.history.max_entries,
+            on_save=self._apply_options,
+        )
+
+    def _apply_options(self, history_limit: int) -> bool:
+        """Persist and immediately apply a validated history capacity."""
+        try:
+            validated_limit = validate_history_limit(history_limit)
+            updated_settings = AppSettings(history_limit=validated_limit)
+            settings_path = save_app_settings(updated_settings)
+        except SettingsError as exc:
+            messagebox.showerror("Options", str(exc), parent=self)
+            return False
+
+        removed_undo, removed_redo = self.history.set_max_entries(validated_limit)
+        self.app_settings = updated_settings
+        self._update_history_controls()
+
+        trimmed = removed_undo + removed_redo
+        details = (
+            f"\n{trimmed} état(s) ancien(s) ont été supprimés immédiatement "
+            "pour respecter la nouvelle limite."
+            if trimmed
+            else ""
+        )
+        messagebox.showinfo(
+            "Options",
+            f"La limite de l’historique est maintenant de {validated_limit} état(s)."
+            f"{details}\n\nPréférence enregistrée dans :\n{settings_path}",
+            parent=self,
+        )
+        return True
 
     def _capture_history_snapshot(self) -> dict:
         """Capture raw GUI values, including temporarily invalid input."""

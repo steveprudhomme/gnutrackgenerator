@@ -20,6 +20,8 @@ class UndoHistory(Generic[SnapshotT]):
     """Store bounded undo and redo sequences of application states."""
 
     def __init__(self, max_entries: int = 100) -> None:
+        if isinstance(max_entries, bool) or not isinstance(max_entries, int):
+            raise ValueError("max_entries doit être un entier.")
         if max_entries < 1:
             raise ValueError("max_entries doit être supérieur ou égal à 1.")
         self.max_entries = max_entries
@@ -47,6 +49,29 @@ class UndoHistory(Generic[SnapshotT]):
     @property
     def redo_depth(self) -> int:
         return len(self._redo_stack)
+
+    def set_max_entries(self, max_entries: int) -> tuple[int, int]:
+        """Change the capacity and immediately trim the oldest states.
+
+        Returns a pair ``(removed_undo, removed_redo)`` so the interface can
+        explain the effect of reducing the configured limit.
+        """
+        if isinstance(max_entries, bool) or not isinstance(max_entries, int):
+            raise ValueError("max_entries doit être un entier.")
+        if max_entries < 1:
+            raise ValueError("max_entries doit être supérieur ou égal à 1.")
+
+        previous_undo = len(self._undo_stack)
+        previous_redo = len(self._redo_stack)
+        self.max_entries = max_entries
+        if previous_undo > max_entries:
+            del self._undo_stack[: previous_undo - max_entries]
+        if previous_redo > max_entries:
+            del self._redo_stack[: previous_redo - max_entries]
+        return (
+            previous_undo - len(self._undo_stack),
+            previous_redo - len(self._redo_stack),
+        )
 
     def reset(self, snapshot: SnapshotT) -> None:
         """Start a new history with ``snapshot`` as the current state."""

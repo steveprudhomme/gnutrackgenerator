@@ -124,7 +124,7 @@ Consulter `SUPPORT.md` avant d’ouvrir un ticket. Pour signaler un bogue, utili
 
 ## Annuler ou rétablir une modification
 
-La version 0.6.2 propose les deux directions de l’historique d’édition et l’organisation interactive de la séquence.
+La version 0.6.3 propose les deux directions de l’historique d’édition et l’organisation interactive de la séquence.
 
 Pour **annuler** :
 
@@ -149,6 +149,16 @@ L’historique couvre explicitement :
 - le SoundFont.
 
 Les frappes rapprochées sont regroupées pour qu’un mot ou une valeur puisse être annulé en une seule étape plutôt qu’un caractère à la fois.
+
+### Configurer la limite de l’historique
+
+1. Ouvrir **Édition → Options**.
+2. Saisir le nombre maximal d’états à conserver.
+3. Cliquer sur **Enregistrer**.
+
+La valeur par défaut est `100`; les valeurs permises vont de `1` à `10000`. Une valeur élevée permet de revenir plus loin, mais peut utiliser davantage de mémoire dans un projet complexe. Si la limite est réduite, les états les plus anciens sont supprimés immédiatement, tandis que les états les plus récents sont conservés.
+
+Cette préférence est enregistrée entre les sessions dans le fichier de configuration de l’application. Elle ne fait pas partie du projet `.gen`, afin qu’un projet partagé ne modifie pas les préférences de l’autre utilisateur.
 
 Après une annulation, toute nouvelle modification efface les états qui auraient pu être rétablis. Lorsqu’un autre projet `.gen` est ouvert, les deux piles sont réinitialisées afin d’éviter de restaurer accidentellement le projet précédent.
 

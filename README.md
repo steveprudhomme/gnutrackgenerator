@@ -1,4 +1,4 @@
-![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.6.2-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
+![Statut](https://img.shields.io/badge/statut-initialisation-yellow) ![Licence](https://img.shields.io/badge/licence-GPLv3-blue) ![Version](https://img.shields.io/badge/version-0.6.3-blue) **GNU TrackGenerator est un logiciel libre et gratuit : chacun peut l’utiliser, l’étudier, le modifier et le redistribuer selon les conditions de la GNU General Public License version 3.0.**
 
 # GNU TrackGenerator
 
@@ -198,10 +198,12 @@ fluidsynth --version
 Si une commande est introuvable, il faut ajouter le dossier contenant l’exécutable correspondant au `PATH` de Windows.
 
 
-## Fonctionnalités de la version 0.6.2
+## Fonctionnalités de la version 0.6.3
 
 - Commandes **Annuler** et **Rétablir** accessibles depuis le menu **Édition**, les boutons dédiés et les raccourcis `Ctrl+Z`, `Ctrl+Y` ou `Ctrl+Maj+Z`.
-- Piles d’annulation et de rétablissement limitées aux 100 derniers états afin de contrôler l’utilisation de la mémoire.
+- Limite des piles Annuler/Rétablir configurable dans **Édition → Options**, avec `100` comme valeur par défaut.
+- Préférence enregistrée entre les sessions dans un fichier de configuration propre à l’application, distinct des projets `.gen`.
+- Une réduction de la limite supprime immédiatement les états les plus anciens tout en conservant les états les plus récents et le projet courant.
 - Toute nouvelle modification effectuée après une annulation efface la pile de rétablissement, conformément au comportement habituel des logiciels de bureau.
 - Regroupement automatique de la saisie au clavier pour éviter une étape d’annulation par caractère.
 - Annulation et rétablissement vérifiés pour l’ajout et la suppression d’une ligne, les changements de tempo, de signature et de nombre de mesures, les accords, les modes d’accord, les réglages d’arpégiateur, la duplication, le déplacement et l’activation globale du click track.

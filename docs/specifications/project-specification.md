@@ -48,6 +48,10 @@ GNU TrackGenerator génère des pistes de métronome programmables et reproducti
 - `REQ-033` — Le bouton **D** duplique la ligne et insère la copie immédiatement sous l’original.
 - `REQ-034` — La duplication copie profondément tous les champs, accords, instruments et réglages d’arpégiateur.
 - `REQ-035` — La duplication constitue une seule action compatible avec Annuler et Rétablir.
+- `REQ-036` — La limite des historiques Annuler et Rétablir est configurable dans **Édition → Options**.
+- `REQ-037` — La limite vaut `100` par défaut et accepte une valeur entière de `1` à `10000`.
+- `REQ-038` — La préférence de limite est persistée entre les sessions dans un fichier de configuration distinct du projet `.gen`.
+- `REQ-039` — Réduire la limite supprime immédiatement les états les plus anciens de chacune des deux piles sans modifier l’état courant.
 
 ## Accords supportés
 
@@ -95,7 +99,10 @@ Pour tolérer certaines écritures non standard rencontrées dans des progressio
 ## Historique d’édition
 
 - Les commandes **Annuler** et **Rétablir** sont disponibles depuis le menu **Édition**, les boutons principaux et les raccourcis `Ctrl+Z`, `Ctrl+Y` ou `Ctrl+Maj+Z`.
-- Les piles d’annulation et de rétablissement conservent chacune au maximum 100 états afin de limiter l’utilisation de la mémoire.
+- Les piles d’annulation et de rétablissement conservent chacune au maximum le nombre d’états configuré dans **Édition → Options**; la valeur par défaut est `100`.
+- La limite acceptée va de `1` à `10000`; l’interface explique qu’une valeur élevée peut augmenter la consommation de mémoire.
+- La préférence est persistée hors du fichier `.gen` et restaurée au prochain démarrage de l’application.
+- Une réduction de la limite retire immédiatement les états les plus anciens des piles Annuler et Rétablir.
 - Toute nouvelle modification après une annulation invalide la pile de rétablissement.
 - Les instantanés utilisent les valeurs brutes de l’interface afin de restaurer aussi les saisies temporairement invalides.
 - Les frappes rapprochées sont regroupées dans une seule étape d’annulation.
@@ -124,7 +131,7 @@ Le format `.gen` est un JSON contenant les segments. Les champs `chord_symbol`, 
 ```json
 {
   "app": "GNU TrackGenerator",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "soundfont_path": null,
   "click_track_enabled": true,
   "segments": [

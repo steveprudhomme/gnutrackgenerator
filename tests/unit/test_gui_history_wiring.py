@@ -60,6 +60,14 @@ class GuiHistoryWiringTests(unittest.TestCase):
         self.assertIn("validate_row_history_state(", self.source)
         self.assertIn("validate_project_history_snapshot(snapshot)", self.source)
 
+    def test_history_limit_is_loaded_and_configurable_from_options(self) -> None:
+        self.assertIn("self.app_settings = load_app_settings()", self.source)
+        self.assertIn("max_entries=self.app_settings.history_limit", self.source)
+        self.assertIn('label="Options…"', self.source)
+        self.assertIn("def open_options_dialog", self.source)
+        self.assertIn("save_app_settings(updated_settings)", self.source)
+        self.assertIn("self.history.set_max_entries(validated_limit)", self.source)
+
 
 if __name__ == "__main__":
     unittest.main()

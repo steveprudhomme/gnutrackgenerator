@@ -95,6 +95,53 @@ class UndoHistoryTests(unittest.TestCase):
         self.assertEqual(history.redo(), 3)
         self.assertIsNone(history.redo())
 
+    def test_reducing_capacity_trims_oldest_undo_states_immediately(self):
+        history = UndoHistory(max_entries=5)
+        history.reset(0)
+        for value in range(1, 6):
+            history.record(value)
+
+        removed_undo, removed_redo = history.set_max_entries(2)
+
+        self.assertEqual((removed_undo, removed_redo), (3, 0))
+        self.assertEqual(history.max_entries, 2)
+        self.assertEqual(history.undo(), 4)
+        self.assertEqual(history.undo(), 3)
+        self.assertIsNone(history.undo())
+
+    def test_reducing_capacity_trims_oldest_redo_states_immediately(self):
+        history = UndoHistory(max_entries=5)
+        history.reset(0)
+        for value in range(1, 6):
+            history.record(value)
+        for _ in range(4):
+            history.undo()
+
+        removed_undo, removed_redo = history.set_max_entries(2)
+
+        self.assertEqual((removed_undo, removed_redo), (0, 2))
+        self.assertEqual(history.redo_depth, 2)
+        self.assertEqual(history.redo(), 2)
+        self.assertEqual(history.redo(), 3)
+        self.assertIsNone(history.redo())
+
+    def test_increasing_capacity_keeps_existing_history(self):
+        history = UndoHistory(max_entries=2)
+        history.reset(0)
+        history.record(1)
+        history.record(2)
+
+        self.assertEqual(history.set_max_entries(10), (0, 0))
+        self.assertEqual(history.max_entries, 10)
+        self.assertEqual(history.undo_depth, 2)
+
+    def test_capacity_must_be_a_positive_integer(self):
+        history = UndoHistory(max_entries=2)
+        with self.assertRaises(ValueError):
+            history.set_max_entries(0)
+        with self.assertRaises(ValueError):
+            history.set_max_entries(True)
+
 
 if __name__ == "__main__":
     unittest.main()

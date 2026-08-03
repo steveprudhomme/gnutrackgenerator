@@ -37,12 +37,12 @@ Les versions et leur contenu restent indicatifs. Une fonctionnalité peut être 
 - ✅ **Réalisé en v0.6.2** — validation centralisée du schéma des instantanés et tests empêchant l’oubli silencieux d’un champ éditable.
 - ✅ **Réalisé en v0.5.0** — historique limité à 100 états pour maîtriser la mémoire.
 - ✅ **Réalisé en v0.5.0** — réinitialisation de l’historique lors de l’ouverture d’un autre projet.
-- Rendre la limite de l’historique configurable dans **Édition → Options** :
-  - conserver `100` comme valeur par défaut;
-  - permettre à l’utilisateur de choisir le nombre maximal d’états conservés;
-  - enregistrer cette préférence entre les sessions;
-  - valider la valeur saisie et expliquer l’impact potentiel sur la mémoire;
-  - appliquer proprement une réduction de la limite à un historique déjà existant.
+- ✅ **Réalisé en v0.6.3** — limite de l’historique configurable dans **Édition → Options** :
+  - `100` conservé comme valeur par défaut;
+  - choix de `1` à `10000` états;
+  - préférence enregistrée entre les sessions;
+  - validation et explication de l’impact potentiel sur la mémoire;
+  - réduction immédiate et propre des piles existantes en supprimant les états les plus anciens.
 
 ### 2. Menu **Fichier**
 
@@ -376,6 +376,14 @@ où `D` signifie *downstroke*, `U` *upstroke* et `-` une absence d’attaque.
 - Déplacement des lignes par cliquer-glisser avec une poignée dédiée.
 - Ordre de séquence conservé dans les sauvegardes et les exports.
 - Compatibilité complète avec Annuler et Rétablir.
+
+## v0.6.3 — Limite d’historique configurable
+
+- Menu **Édition → Options**.
+- Limite configurable de `1` à `10000`, avec `100` par défaut.
+- Persistance de la préférence entre les sessions.
+- Redimensionnement immédiat des piles en conservant les états les plus récents.
+- Information sur l’incidence potentielle d’une grande limite sur la mémoire.
 
 ## v0.6.2 — Consolidation Annuler/Rétablir
 
